@@ -8,7 +8,10 @@ import {
   ScrollView, 
   SafeAreaView, 
   Platform, 
-  StatusBar 
+  StatusBar,
+  Image,
+  TextInput,
+  TouchableOpacity
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -25,9 +28,10 @@ const AppHeader = () => {
   return (
     <View style={styles.headerContainer}>
       <Text style={styles.headerTitle}>AMJ BELIZE</Text>
-      <View style={styles.avatarPlaceholder}>
-        <Text style={styles.avatarText}>🕌</Text>
-      </View>
+      <Image 
+        source={require('./assets/markup_147372.png')} 
+        style={styles.headerImage} 
+      />
     </View>
   );
 };
@@ -45,11 +49,11 @@ const PrayerTimesScreen = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Format dynamic today date string
+  // Format dynamic today date string (e.g. "Friday, October 16")
   const options = { weekday: 'long', month: 'long', day: 'numeric' };
   const formattedDate = currentTime.toLocaleDateString('en-US', options);
 
-  // Prayer schedules for Belize (24-hour equivalents used for logical comparison)
+  // Prayer schedules for Belize
   const prayerData = [
     { name: 'Fajr', time: '4:45 AM', hour: 4, minute: 45 },
     { name: 'Zuhr', time: '1:00 PM', hour: 13, minute: 0 },
@@ -61,13 +65,12 @@ const PrayerTimesScreen = () => {
   // Calculate current minutes since midnight
   const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
 
-  // Find the index of the next upcoming prayer
+  // Find index of the next upcoming prayer
   let nextPrayerIndex = prayerData.findIndex(prayer => {
     const prayerMinutes = prayer.hour * 60 + prayer.minute;
     return prayerMinutes > currentMinutes;
   });
 
-  // If all prayers for today have passed, highlight Fajr as the next upcoming prayer
   if (nextPrayerIndex === -1) {
     nextPrayerIndex = 0;
   }
@@ -126,17 +129,86 @@ const PrayerTimesScreen = () => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                            PLACEHOLDER SCREENS                             */
+/*                       TAB SCREEN 2: ANNOUNCEMENTS                          */
 /* -------------------------------------------------------------------------- */
 
-const EventsScreen = () => (
-  <SafeAreaView style={styles.container}>
-    <AppHeader />
-    <View style={styles.centeredView}>
-      <Text style={styles.placeholderText}>Events Screen Content</Text>
-    </View>
-  </SafeAreaView>
-);
+const AnnouncementsScreen = () => {
+  // Toggle this: true = Imam (shows input bar), false = Regular Member (read-only)
+  const isImam = true; 
+
+  const [messages, setMessages] = useState([
+    {
+      id: '1',
+      sender: 'Imam',
+      text: 'Assalamu Alaikum. Jummah prayer tomorrow will begin at 1:00 PM inshaAllah.',
+      time: 'Today, 2:15 PM',
+    },
+    {
+      id: '2',
+      sender: 'Imam',
+      text: 'Reminder: Community potluck this Sunday after Asr prayer.',
+      time: 'Yesterday, 6:00 PM',
+    },
+  ]);
+
+  const [newMessage, setNewMessage] = useState('');
+
+  const handleSendMessage = () => {
+    if (newMessage.trim() === '') return;
+
+    const newEntry = {
+      id: Date.now().toString(),
+      sender: 'Imam',
+      text: newMessage,
+      time: 'Just now',
+    };
+
+    setMessages([newEntry, ...messages]);
+    setNewMessage('');
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <AppHeader />
+      <View style={{ flex: 1, paddingHorizontal: 16 }}>
+        
+        {/* Messages List */}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 10 }}>
+          {messages.map((msg) => (
+            <View key={msg.id} style={styles.announcementCard}>
+              <View style={styles.announcementHeader}>
+                <Text style={styles.senderBadge}>🕌 {msg.sender}</Text>
+                <Text style={styles.timestampText}>{msg.time}</Text>
+              </View>
+              <Text style={styles.messageContent}>{msg.text}</Text>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Input Bar - ONLY VISIBLE TO THE IMAM */}
+        {isImam && (
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Broadcast an announcement..."
+              placeholderTextColor="#A0AEC0"
+              value={newMessage}
+              onChangeText={setNewMessage}
+            />
+            <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
+              <Ionicons name="send" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+      </View>
+    </SafeAreaView>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                            PLACEHOLDER SCREENS                             */
+/* -------------------------------------------------------------------------- */
 
 const TasbihScreen = () => (
   <SafeAreaView style={styles.container}>
@@ -194,7 +266,7 @@ export default function App() {
           tabBarIcon: ({ color, size }) => {
             let iconName;
             if (route.name === 'Times') iconName = 'time-outline';
-            else if (route.name === 'Events') iconName = 'list-outline';
+            else if (route.name === 'Announce') iconName = 'megaphone-outline';
             else if (route.name === 'Tasbih') iconName = 'disc-outline';
             else if (route.name === 'Qibla') iconName = 'compass-outline';
             else if (route.name === 'Calendar') iconName = 'calendar-outline';
@@ -205,7 +277,7 @@ export default function App() {
         })}
       >
         <Tab.Screen name="Times" component={PrayerTimesScreen} />
-        <Tab.Screen name="Events" component={EventsScreen} />
+        <Tab.Screen name="Announce" component={AnnouncementsScreen} />
         <Tab.Screen name="Tasbih" component={TasbihScreen} />
         <Tab.Screen name="Qibla" component={QiblaScreen} />
         <Tab.Screen name="Calendar" component={CalendarScreen} />
@@ -254,16 +326,12 @@ const styles = StyleSheet.create({
     color: '#003B25',
     letterSpacing: 0.5,
   },
-  avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 20,
+  headerImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
   },
 
   // Green Banner Styling
@@ -319,7 +387,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justify.content: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
     shadowColor: '#000',
@@ -368,5 +436,67 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontSize: 10,
     fontWeight: '800',
+  },
+
+  // Announcement Screen Styling
+  announcementCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#005D3A',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  announcementHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  senderBadge: {
+    fontWeight: '700',
+    color: '#005D3A',
+    fontSize: 14,
+  },
+  timestampText: {
+    fontSize: 12,
+    color: '#A0AEC0',
+  },
+  messageContent: {
+    fontSize: 15,
+    color: '#2D3748',
+    lineHeight: 22,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8F9FA',
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#CBD5E0',
+    marginRight: 8,
+    color: '#2D3748',
+  },
+  sendButton: {
+    backgroundColor: '#005D3A',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
