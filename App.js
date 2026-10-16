@@ -1,6 +1,6 @@
 // App.js - Main entry point for AMJ Belize Community App
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -37,19 +37,40 @@ const AppHeader = () => {
 /* -------------------------------------------------------------------------- */
 
 const PrayerTimesScreen = () => {
-  // Get today's dynamic date string (e.g. "Friday, October 16")
-  const today = new Date();
-  const options = { weekday: 'long', month: 'long', day: 'numeric' };
-  const formattedDate = today.toLocaleDateString('en-US', options);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Updated Belize prayer schedule
-  const prayerTimes = [
-    { name: 'Fajr', time: '4:45 AM', isNext: false },
-    { name: 'Zuhr', time: '1:00 PM', isNext: true },
-    { name: 'Asr', time: '3:30 PM', isNext: false },
-    { name: 'Maghrib', time: '6:30 PM', isNext: false },
-    { name: 'Isha', time: '6:30 PM', isNext: false },
+  // Update current time every minute to keep the "NEXT" highlight accurate
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Format dynamic today date string
+  const options = { weekday: 'long', month: 'long', day: 'numeric' };
+  const formattedDate = currentTime.toLocaleDateString('en-US', options);
+
+  // Prayer schedules for Belize (24-hour equivalents used for logical comparison)
+  const prayerData = [
+    { name: 'Fajr', time: '4:45 AM', hour: 4, minute: 45 },
+    { name: 'Zuhr', time: '1:00 PM', hour: 13, minute: 0 },
+    { name: 'Asr', time: '3:30 PM', hour: 15, minute: 30 },
+    { name: 'Maghrib', time: '6:30 PM', hour: 18, minute: 30 },
+    { name: 'Isha', time: '6:30 PM', hour: 18, minute: 30 },
   ];
+
+  // Calculate current minutes since midnight
+  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+
+  // Find the index of the next upcoming prayer
+  let nextPrayerIndex = prayerData.findIndex(prayer => {
+    const prayerMinutes = prayer.hour * 60 + prayer.minute;
+    return prayerMinutes > currentMinutes;
+  });
+
+  // If all prayers for today have passed, highlight Fajr as the next upcoming prayer
+  if (nextPrayerIndex === -1) {
+    nextPrayerIndex = 0;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -69,31 +90,35 @@ const PrayerTimesScreen = () => {
           </View>
         </View>
 
-        {/* Prayer Time Cards */}
-        {prayerTimes.map((item, index) => (
-          <View 
-            key={index} 
-            style={[
-              styles.prayerRowCard, 
-              item.isNext && styles.nextPrayerHighlight
-            ]}
-          >
-            <View style={styles.prayerNameContainer}>
-              {item.isNext && <View style={styles.greenDot} />}
-              <Text style={[styles.prayerNameText, item.isNext && styles.nextPrayerText]}>
-                {item.name}
+        {/* Prayer Time Cards with Dynamic "NEXT" Highlight */}
+        {prayerData.map((item, index) => {
+          const isNext = index === nextPrayerIndex;
+
+          return (
+            <View 
+              key={index} 
+              style={[
+                styles.prayerRowCard, 
+                isNext && styles.nextPrayerHighlight
+              ]}
+            >
+              <View style={styles.prayerNameContainer}>
+                {isNext && <View style={styles.greenDot} />}
+                <Text style={[styles.prayerNameText, isNext && styles.nextPrayerText]}>
+                  {item.name}
+                </Text>
+                {isNext && (
+                  <View style={styles.nextBadge}>
+                    <Text style={styles.nextBadgeText}>NEXT</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.prayerTimeText, isNext && styles.nextPrayerText]}>
+                {item.time}
               </Text>
-              {item.isNext && (
-                <View style={styles.nextBadge}>
-                  <Text style={styles.nextBadgeText}>NEXT</Text>
-                </View>
-              )}
             </View>
-            <Text style={[styles.prayerTimeText, item.isNext && styles.nextPrayerText]}>
-              {item.time}
-            </Text>
-          </View>
-        ))}
+          );
+        })}
 
       </ScrollView>
     </SafeAreaView>
@@ -166,7 +191,6 @@ export default function App() {
             paddingBottom: 10,
             paddingTop: 5,
           },
-          // Map vector icons to bottom tabs
           tabBarIcon: ({ color, size }) => {
             let iconName;
             if (route.name === 'Times') iconName = 'time-outline';
@@ -199,7 +223,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8F9FA',
-    // Push content below Android camera notch / status bar
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 0,
   },
   scrollContent: {
