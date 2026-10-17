@@ -100,7 +100,6 @@ const PrayerTimesScreen = () => {
       <AppHeader />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        {/* Top Green Banner */}
         <View style={styles.greenBannerCard}>
           <Text style={styles.bannerSubLabel}>PRAYER TIMES</Text>
           <Text style={styles.bannerMainTitle}>Belize City</Text>
@@ -113,7 +112,6 @@ const PrayerTimesScreen = () => {
           </View>
         </View>
 
-        {/* Prayer Time Cards */}
         {prayerData.map((item, index) => {
           const isNext = index === nextPrayerIndex;
           return (
@@ -139,7 +137,6 @@ const PrayerTimesScreen = () => {
           );
         })}
 
-        {/* Prayer of the Day Box */}
         <View style={styles.prayerOfDayCard}>
           <View style={styles.prayerOfDayHeaderRow}>
             <Text style={styles.prayerOfDayTitle}>PRAYER OF THE DAY</Text>
@@ -551,13 +548,11 @@ const KhutbaScreen = () => {
       <AppHeader />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        {/* Top Banner */}
         <View style={styles.greenBannerCard}>
           <Text style={styles.bannerSubLabel}>BELOVED HUZOOR'S (AA)</Text>
           <Text style={styles.bannerMainTitle}>Friday Sermon</Text>
         </View>
 
-        {/* Video Card Container */}
         <View style={styles.sermonCard}>
           <View style={styles.sermonHeaderRow}>
             <Text style={styles.sermonBadge}>LATEST KHUTBA</Text>
@@ -568,7 +563,6 @@ const KhutbaScreen = () => {
           <Text style={styles.sermonSubText}>By {latestSermon.speaker}</Text>
           <Text style={styles.sermonLocationText}>📍 {latestSermon.location}</Text>
 
-          {/* YouTube Launch Button */}
           <TouchableOpacity 
             style={styles.youtubeButton} 
             activeOpacity={0.85}
@@ -580,7 +574,6 @@ const KhutbaScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Summary Box */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryHeaderRow}>
             <Ionicons name="document-text-outline" size={18} color="#005D3A" />
@@ -605,7 +598,6 @@ const KhutbaScreen = () => {
 /* -------------------------------------------------------------------------- */
 
 const SettingsScreen = () => {
-  const [darkMode, setDarkMode] = useState(false);
   const [prayerReminders, setPrayerReminders] = useState(false);
   const [selectedOffset, setSelectedOffset] = useState('15 min');
 
@@ -624,27 +616,9 @@ const SettingsScreen = () => {
       <AppHeader />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        {/* Top Banner */}
         <View style={styles.greenBannerCard}>
           <Text style={styles.bannerSubLabel}>SETTINGS</Text>
           <Text style={styles.bannerMainTitle}>Preferences</Text>
-        </View>
-
-        {/* APPEARANCE SECTION */}
-        <View style={styles.settingsGroupCard}>
-          <Text style={styles.settingsGroupHeader}>APPEARANCE</Text>
-          <View style={styles.settingsRow}>
-            <View style={styles.settingsRowLeft}>
-              <Ionicons name="sunny-outline" size={20} color="#2D3748" style={{ marginRight: 12 }} />
-              <Text style={styles.settingsRowTitle}>Dark Mode</Text>
-            </View>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              trackColor={{ false: '#E2E8F0', true: '#005D3A' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
         </View>
 
         {/* DATA & STORAGE SECTION */}
@@ -690,7 +664,6 @@ const SettingsScreen = () => {
             />
           </View>
 
-          {/* EXPANDED REMINDER CHIPS */}
           {prayerReminders && (
             <View style={[styles.reminderExpandBox, styles.settingsBorderBottom]}>
               <Text style={styles.reminderExpandTitle}>Remind me</Text>
@@ -716,7 +689,6 @@ const SettingsScreen = () => {
             </View>
           )}
 
-          {/* TEST NOTIFICATION BUTTON */}
           <TouchableOpacity style={styles.settingsRow} onPress={handleTestNotification}>
             <View style={styles.settingsRowLeft}>
               <Ionicons name="send-outline" size={20} color="#2D3748" style={{ marginRight: 12 }} />
@@ -760,6 +732,7 @@ export default function App() {
             marginBottom: 10,
             marginHorizontal: 10,
             borderRadius: 20,
+            backgroundColor: '#FFFFFF',
           },
           tabBarIcon: ({ color, size }) => {
             let iconName;
@@ -798,15 +771,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 25,
-  },
-  centeredView: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: '#666',
   },
 
   // Header Styling
@@ -1178,7 +1142,7 @@ const styles = StyleSheet.create({
   stepBtnText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#4A5568',
+    color: '#2D3748',
   },
   targetValueText: {
     fontSize: 16,
@@ -1297,7 +1261,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     fontWeight: '800',
     fontSize: 14,
-    color: '#4A5568',
+    color: '#2D3748',
   },
   needleContainer: {
     position: 'absolute',
@@ -1471,9 +1435,10 @@ const styles = StyleSheet.create({
   summaryText: {
     flex: 1,
     fontSize: 14,
-    color: '#4A5568',
+    color: '#2D3748',
     lineHeight: 20,
   },
+
   // Settings Screen Styling
   settingsGroupCard: {
     backgroundColor: '#FFFFFF',
@@ -1526,6 +1491,7 @@ const styles = StyleSheet.create({
   },
   reminderExpandBox: {
     paddingVertical: 12,
+    borderBottomColor: '#F1F5F9',
   },
   reminderExpandTitle: {
     fontSize: 14,
