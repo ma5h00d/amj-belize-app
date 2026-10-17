@@ -14,7 +14,9 @@ import {
   TouchableOpacity,
   Linking,
   Switch,
-  Alert
+  Alert,
+  Dimensions,
+  Modal
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -22,7 +24,32 @@ import { Ionicons } from '@expo/vector-icons';
 import { Magnetometer } from 'expo-sensors';
 import * as Location from 'expo-location';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
+
+// Local 19-Page Salat Pamphlet Images Array
+// Note: Ensure images exist in assets/salat_guide/
+const salatPages = [
+  require('./assets/salat_guide/page_1.png'),
+  require('./assets/salat_guide/page_2.png'),
+  require('./assets/salat_guide/page_3.png'),
+  require('./assets/salat_guide/page_4.png'),
+  require('./assets/salat_guide/page_5.png'),
+  require('./assets/salat_guide/page_6.png'),
+  require('./assets/salat_guide/page_7.png'),
+  require('./assets/salat_guide/page_8.png'),
+  require('./assets/salat_guide/page_9.png'),
+  require('./assets/salat_guide/page_10.png'),
+  require('./assets/salat_guide/page_11.png'),
+  require('./assets/salat_guide/page_12.png'),
+  require('./assets/salat_guide/page_13.png'),
+  require('./assets/salat_guide/page_14.png'),
+  require('./assets/salat_guide/page_15.png'),
+  require('./assets/salat_guide/page_16.png'),
+  require('./assets/salat_guide/page_17.png'),
+  require('./assets/salat_guide/page_18.png'),
+  require('./assets/salat_guide/page_19.png'),
+];
 
 /* -------------------------------------------------------------------------- */
 /*                              SHARED HEADER                                 */
@@ -239,7 +266,7 @@ const AnnouncementsScreen = () => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                         TAB SCREEN 3: DIGITAL TASBIH                       */
+/*                        TAB SCREEN 3: PRAYERS & TASBIH                      */
 /* -------------------------------------------------------------------------- */
 
 const INITIAL_PRAYERS = [
@@ -251,9 +278,11 @@ const INITIAL_PRAYERS = [
   { id: '6', name: 'Durood Sharif', translation: 'Blessings upon the Prophet', arabic: 'ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ', symbol: 'ا', color: '#0D9488', target: 33, count: 0, total: 0, sets: 0 },
 ];
 
-const TasbihScreen = () => {
+const PrayersScreen = () => {
   const [prayers, setPrayers] = useState(INITIAL_PRAYERS);
   const [selectedPrayerId, setSelectedPrayerId] = useState(null);
+  const [pamphletModalVisible, setPamphletModalVisible] = useState(false);
+  const [activePageIndex, setActivePageIndex] = useState(0);
 
   const selectedPrayer = prayers.find(p => p.id === selectedPrayerId);
 
@@ -277,6 +306,11 @@ const TasbihScreen = () => {
       const newTarget = Math.max(1, p.target + delta);
       return { ...p, target: newTarget };
     }));
+  };
+
+  const handleScroll = (event) => {
+    const slide = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    setActivePageIndex(slide);
   };
 
   return (
@@ -353,9 +387,25 @@ const TasbihScreen = () => {
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.greenBannerCard}>
-            <Text style={styles.bannerSubLabel}>DIGITAL TASBIH</Text>
-            <Text style={styles.bannerMainTitle}>Select a Prayer</Text>
+            <Text style={styles.bannerSubLabel}>DAILY REMEMBRANCE</Text>
+            <Text style={styles.bannerMainTitle}>Prayers & Tasbih</Text>
           </View>
+
+          {/* LEARN SALAT PAMPHLET BUTTON */}
+          <TouchableOpacity 
+            style={styles.learnSalatCard} 
+            activeOpacity={0.85}
+            onPress={() => setPamphletModalVisible(true)}
+          >
+            <View style={styles.learnSalatIconCircle}>
+              <Ionicons name="book-outline" size={24} color="#005D3A" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.learnSalatTitle}>Learn Salat Guide</Text>
+              <Text style={styles.learnSalatSub}>Interactive 19-page prayer guide</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#005D3A" />
+          </TouchableOpacity>
 
           <View style={styles.tasbihGrid}>
             {prayers.map((item) => (
@@ -378,25 +428,51 @@ const TasbihScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
-
-          <View style={styles.progressCard}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Ionicons name="disc-outline" size={18} color="#005D3A" style={{ marginRight: 6 }} />
-              <Text style={{ fontWeight: '700', fontSize: 14, color: '#2D3748' }}>Today's Progress</Text>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-              {prayers.slice(0, 3).map((p) => (
-                <View key={p.id} style={{ alignItems: 'center', flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: '#718096', marginBottom: 4 }}>{p.name}</Text>
-                  <View style={styles.progressBarBg}>
-                    <View style={[styles.progressBarFill, { width: `${Math.min(100, (p.count / p.target) * 100)}%`, backgroundColor: p.color }]} />
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
         </ScrollView>
       )}
+
+      {/* FULL-SCREEN 19-PAGE PAMPHLET MODAL VIEWER */}
+      <Modal 
+        visible={pamphletModalVisible} 
+        animationType="slide" 
+        onRequestClose={() => setPamphletModalVisible(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#1A202C' }}>
+          
+          {/* Modal Header Bar */}
+          <View style={styles.pamphletHeaderBar}>
+            <TouchableOpacity onPress={() => setPamphletModalVisible(false)} style={styles.closeModalBtn}>
+              <Ionicons name="close" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.pamphletHeaderTitle}>Learn Salat Booklet</Text>
+            <Text style={styles.pamphletPageIndicator}>
+              {activePageIndex + 1} / {salatPages.length}
+            </Text>
+          </View>
+
+          {/* Swipeable Page Gallery */}
+          <ScrollView 
+            horizontal 
+            pagingEnabled 
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            style={{ flex: 1 }}
+          >
+            {salatPages.map((pageSrc, idx) => (
+              <View key={idx} style={styles.pamphletPageSlide}>
+                <Image 
+                  source={pageSrc} 
+                  style={styles.pamphletImage} 
+                  resizeMode="contain" 
+                />
+              </View>
+            ))}
+          </ScrollView>
+
+        </SafeAreaView>
+      </Modal>
+
     </SafeAreaView>
   );
 };
@@ -621,7 +697,6 @@ const SettingsScreen = () => {
           <Text style={styles.bannerMainTitle}>Preferences</Text>
         </View>
 
-        {/* DATA & STORAGE SECTION */}
         <View style={styles.settingsGroupCard}>
           <Text style={styles.settingsGroupHeader}>DATA & STORAGE</Text>
           
@@ -642,7 +717,6 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* NOTIFICATIONS SECTION */}
         <View style={styles.settingsGroupCard}>
           <Text style={styles.settingsGroupHeader}>NOTIFICATIONS</Text>
           
@@ -700,7 +774,6 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* FOOTER INFO */}
         <View style={styles.settingsFooter}>
           <Text style={styles.footerAppTitle}>AMJ Belize Community App</Text>
           <Text style={styles.footerAppSub}>
@@ -738,7 +811,7 @@ export default function App() {
             let iconName;
             if (route.name === 'Times') iconName = 'time-outline';
             else if (route.name === 'Announce') iconName = 'megaphone-outline';
-            else if (route.name === 'Tasbih') iconName = 'disc-outline';
+            else if (route.name === 'Prayers') iconName = 'disc-outline';
             else if (route.name === 'Qibla') iconName = 'compass-outline';
             else if (route.name === 'Khutba') iconName = 'tv-outline';
             else if (route.name === 'Settings') iconName = 'settings-outline';
@@ -749,7 +822,7 @@ export default function App() {
       >
         <Tab.Screen name="Times" component={PrayerTimesScreen} />
         <Tab.Screen name="Announce" component={AnnouncementsScreen} />
-        <Tab.Screen name="Tasbih" component={TasbihScreen} />
+        <Tab.Screen name="Prayers" component={PrayersScreen} />
         <Tab.Screen name="Qibla" component={QiblaScreen} />
         <Tab.Screen name="Khutba" component={KhutbaScreen} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
@@ -1007,6 +1080,73 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  // Learn Salat Button Card Styles
+  learnSalatCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#005D3A',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  learnSalatIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  learnSalatTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#005D3A',
+  },
+  learnSalatSub: {
+    fontSize: 12,
+    color: '#718096',
+    marginTop: 2,
+  },
+
+  // Pamphlet Modal Viewer Styles
+  pamphletHeaderBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#2D3748',
+  },
+  closeModalBtn: {
+    padding: 4,
+  },
+  pamphletHeaderTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  pamphletPageIndicator: {
+    color: '#A0AEC0',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  pamphletPageSlide: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT - 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pamphletImage: {
+    width: SCREEN_WIDTH - 20,
+    height: SCREEN_HEIGHT - 160,
+  },
+
   // Tasbih Screen Styling
   tasbihGrid: {
     flexDirection: 'row',
@@ -1058,23 +1198,6 @@ const styles = StyleSheet.create({
     color: '#005D3A',
     fontWeight: '600',
     marginLeft: 4,
-  },
-  progressCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 8,
-  },
-  progressBarBg: {
-    height: 6,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    width: '80%',
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 3,
   },
 
   // Counter View Specific Styling
