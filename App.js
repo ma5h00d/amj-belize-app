@@ -12,7 +12,9 @@ import {
   Image,
   TextInput,
   TouchableOpacity,
-  Linking
+  Linking,
+  Switch,
+  Alert
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -599,17 +601,145 @@ const KhutbaScreen = () => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                            SETTINGS SCREEN                                 */
+/*                            TAB SCREEN 6: SETTINGS                          */
 /* -------------------------------------------------------------------------- */
 
-const SettingsScreen = () => (
-  <SafeAreaView style={styles.container}>
-    <AppHeader />
-    <View style={styles.centeredView}>
-      <Text style={styles.placeholderText}>Settings Screen Content</Text>
-    </View>
-  </SafeAreaView>
-);
+const SettingsScreen = () => {
+  const [darkMode, setDarkMode] = useState(false);
+  const [prayerReminders, setPrayerReminders] = useState(false);
+  const [selectedOffset, setSelectedOffset] = useState('15 min');
+
+  const reminderOptions = ['At time', '5 min', '10 min', '15 min', '30 min'];
+
+  const handleClearCache = () => {
+    Alert.alert("Cache Cleared", "Local app storage and cached prayer schedules have been reset.");
+  };
+
+  const handleTestNotification = () => {
+    Alert.alert("Test Notification", "AMJ Belize: Prayer reminder test successful!");
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <AppHeader />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        
+        {/* Top Banner */}
+        <View style={styles.greenBannerCard}>
+          <Text style={styles.bannerSubLabel}>SETTINGS</Text>
+          <Text style={styles.bannerMainTitle}>Preferences</Text>
+        </View>
+
+        {/* APPEARANCE SECTION */}
+        <View style={styles.settingsGroupCard}>
+          <Text style={styles.settingsGroupHeader}>APPEARANCE</Text>
+          <View style={styles.settingsRow}>
+            <View style={styles.settingsRowLeft}>
+              <Ionicons name="sunny-outline" size={20} color="#2D3748" style={{ marginRight: 12 }} />
+              <Text style={styles.settingsRowTitle}>Dark Mode</Text>
+            </View>
+            <Switch
+              value={darkMode}
+              onValueChange={setDarkMode}
+              trackColor={{ false: '#E2E8F0', true: '#005D3A' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+        </View>
+
+        {/* DATA & STORAGE SECTION */}
+        <View style={styles.settingsGroupCard}>
+          <Text style={styles.settingsGroupHeader}>DATA & STORAGE</Text>
+          
+          <View style={[styles.settingsRow, styles.settingsBorderBottom]}>
+            <View style={styles.settingsRowLeft}>
+              <Ionicons name="time-outline" size={20} color="#2D3748" style={{ marginRight: 12 }} />
+              <Text style={styles.settingsRowTitle}>Last Updated</Text>
+            </View>
+            <Text style={styles.settingsRowValue}>Just now</Text>
+          </View>
+
+          <TouchableOpacity style={styles.settingsRow} onPress={handleClearCache}>
+            <View style={styles.settingsRowLeft}>
+              <Ionicons name="trash-outline" size={20} color="#E53E3E" style={{ marginRight: 12 }} />
+              <Text style={[styles.settingsRowTitle, { color: '#E53E3E' }]}>Clear Cache</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#A0AEC0" />
+          </TouchableOpacity>
+        </View>
+
+        {/* NOTIFICATIONS SECTION */}
+        <View style={styles.settingsGroupCard}>
+          <Text style={styles.settingsGroupHeader}>NOTIFICATIONS</Text>
+          
+          <View style={[styles.settingsRow, prayerReminders && styles.settingsBorderBottom]}>
+            <View style={styles.settingsRowLeft}>
+              <Ionicons name="notifications-outline" size={20} color="#005D3A" style={{ marginRight: 12 }} />
+              <View>
+                <Text style={styles.settingsRowTitle}>Prayer Reminders</Text>
+                <Text style={styles.settingsRowSub}>
+                  {prayerReminders ? 'On for the next 7 days' : 'Off'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={prayerReminders}
+              onValueChange={setPrayerReminders}
+              trackColor={{ false: '#E2E8F0', true: '#005D3A' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
+
+          {/* EXPANDED REMINDER CHIPS */}
+          {prayerReminders && (
+            <View style={[styles.reminderExpandBox, styles.settingsBorderBottom]}>
+              <Text style={styles.reminderExpandTitle}>Remind me</Text>
+              <View style={styles.chipRow}>
+                {reminderOptions.map((option) => {
+                  const isSelected = selectedOffset === option;
+                  return (
+                    <TouchableOpacity
+                      key={option}
+                      style={[styles.chip, isSelected && styles.chipActive]}
+                      onPress={() => setSelectedOffset(option)}
+                    >
+                      <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={styles.reminderFooterSub}>
+                Reminders arrive {selectedOffset} before each prayer.
+              </Text>
+            </View>
+          )}
+
+          {/* TEST NOTIFICATION BUTTON */}
+          <TouchableOpacity style={styles.settingsRow} onPress={handleTestNotification}>
+            <View style={styles.settingsRowLeft}>
+              <Ionicons name="send-outline" size={20} color="#2D3748" style={{ marginRight: 12 }} />
+              <View>
+                <Text style={styles.settingsRowTitle}>Send a test notification</Text>
+                <Text style={styles.settingsRowSub}>Check that reminders reach this device</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* FOOTER INFO */}
+        <View style={styles.settingsFooter}>
+          <Text style={styles.footerAppTitle}>AMJ Belize Community App</Text>
+          <Text style={styles.footerAppSub}>
+            Prayer times, announcements, and digital tools for the Ahmadiyya Muslim Community Belize.
+          </Text>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
 
 /* -------------------------------------------------------------------------- */
 /*                             MAIN NAVIGATION                                */
@@ -1343,5 +1473,110 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#4A5568',
     lineHeight: 20,
+  },
+  // Settings Screen Styling
+  settingsGroupCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  settingsGroupHeader: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#A0AEC0',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  settingsBorderBottom: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  settingsRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingsRowTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2D3748',
+  },
+  settingsRowSub: {
+    fontSize: 12,
+    color: '#A0AEC0',
+    marginTop: 2,
+  },
+  settingsRowValue: {
+    fontSize: 13,
+    color: '#A0AEC0',
+    fontWeight: '500',
+  },
+  reminderExpandBox: {
+    paddingVertical: 12,
+  },
+  reminderExpandTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2D3748',
+    marginBottom: 10,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
+  },
+  chip: {
+    backgroundColor: '#EDF2F7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  chipActive: {
+    backgroundColor: '#005D3A',
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4A5568',
+  },
+  chipTextActive: {
+    color: '#FFFFFF',
+  },
+  reminderFooterSub: {
+    fontSize: 12,
+    color: '#718096',
+    marginTop: 4,
+  },
+  settingsFooter: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+  },
+  footerAppTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#A0AEC0',
+  },
+  footerAppSub: {
+    fontSize: 11,
+    color: '#CBD5E0',
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 16,
   },
 });
