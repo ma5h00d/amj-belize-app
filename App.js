@@ -11,13 +11,15 @@ import {
   StatusBar,
   Image,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
+  Linking
 } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { Magnetometer } from 'expo-sensors';
+import * as Location from 'expo-location';
 
-// Create Bottom Tab Navigator instance
 const Tab = createBottomTabNavigator();
 
 /* -------------------------------------------------------------------------- */
@@ -43,17 +45,14 @@ const AppHeader = () => {
 const PrayerTimesScreen = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
 
-  // Update current time every minute to keep the "NEXT" highlight accurate
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // Format dynamic today date string (e.g. "Friday, October 16")
   const options = { weekday: 'long', month: 'long', day: 'numeric' };
   const formattedDate = currentTime.toLocaleDateString('en-US', options);
 
-  // Prayer schedules for Belize
   const prayerData = [
     { name: 'Fajr', time: '4:45 AM', hour: 4, minute: 45 },
     { name: 'Zuhr', time: '1:00 PM', hour: 13, minute: 0 },
@@ -62,18 +61,37 @@ const PrayerTimesScreen = () => {
     { name: 'Isha', time: '6:30 PM', hour: 18, minute: 30 },
   ];
 
-  // Calculate current minutes since midnight
-  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+  const dailyPrayers = [
+    {
+      type: 'Holy Qur\'an',
+      reference: 'Surah Al-Baqarah (2:202)',
+      text: '"Our Lord, grant us good in this world and good in the Hereafter, and protect us from the torment of the Fire."'
+    },
+    {
+      type: 'Holy Prophet (saw)',
+      reference: 'Sunan Ibn Majah',
+      text: '"O Allah, I ask You for beneficial knowledge, good acceptable provision, and deeds that are accepted."'
+    },
+    {
+      type: 'Promised Messiah (as)',
+      reference: 'Tazkirah',
+      text: '"Lord, everything is at Your service; so O Lord, protect me, help me, and have mercy on me."'
+    }
+  ];
 
-  // Find index of the next upcoming prayer
+  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+  const fajrMinutes = 4 * 60 + 45;
+
   let nextPrayerIndex = prayerData.findIndex(prayer => {
     const prayerMinutes = prayer.hour * 60 + prayer.minute;
     return prayerMinutes > currentMinutes;
   });
 
-  if (nextPrayerIndex === -1) {
-    nextPrayerIndex = 0;
-  }
+  if (nextPrayerIndex === -1) nextPrayerIndex = 0;
+
+  const epochDays = Math.floor(currentTime.getTime() / (1000 * 60 * 60 * 24));
+  const activeDayIndex = currentMinutes >= fajrMinutes ? epochDays : epochDays - 1;
+  const todayPrayer = dailyPrayers[Math.abs(activeDayIndex) % dailyPrayers.length];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -83,7 +101,7 @@ const PrayerTimesScreen = () => {
         {/* Top Green Banner */}
         <View style={styles.greenBannerCard}>
           <Text style={styles.bannerSubLabel}>PRAYER TIMES</Text>
-          <Text style={styles.bannerMainTitle}>Belize</Text>
+          <Text style={styles.bannerMainTitle}>Belize City</Text>
           <View style={styles.divider} />
           <View style={styles.dateSelectorRow}>
             <View style={{ alignItems: 'center', width: '100%' }}>
@@ -93,17 +111,13 @@ const PrayerTimesScreen = () => {
           </View>
         </View>
 
-        {/* Prayer Time Cards with Dynamic "NEXT" Highlight */}
+        {/* Prayer Time Cards */}
         {prayerData.map((item, index) => {
           const isNext = index === nextPrayerIndex;
-
           return (
             <View 
               key={index} 
-              style={[
-                styles.prayerRowCard, 
-                isNext && styles.nextPrayerHighlight
-              ]}
+              style={[styles.prayerRowCard, isNext && styles.nextPrayerHighlight]}
             >
               <View style={styles.prayerNameContainer}>
                 {isNext && <View style={styles.greenDot} />}
@@ -123,6 +137,16 @@ const PrayerTimesScreen = () => {
           );
         })}
 
+        {/* Prayer of the Day Box */}
+        <View style={styles.prayerOfDayCard}>
+          <View style={styles.prayerOfDayHeaderRow}>
+            <Text style={styles.prayerOfDayTitle}>PRAYER OF THE DAY</Text>
+            <Text style={styles.prayerOfDayBadge}>{todayPrayer.type}</Text>
+          </View>
+          <Text style={styles.prayerOfDayItalicText}>{todayPrayer.text}</Text>
+          <Text style={styles.prayerOfDaySource}>— {todayPrayer.reference}</Text>
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -132,8 +156,19 @@ const PrayerTimesScreen = () => {
 /*                       TAB SCREEN 2: ANNOUNCEMENTS                          */
 /* -------------------------------------------------------------------------- */
 
+const getRelativeTime = (timestamp) => {
+  if (!timestamp) return 'Just now';
+  const diffInSeconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (diffInSeconds < 60) return 'Just now';
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  return `${diffInDays}d ago`;
+};
+
 const AnnouncementsScreen = () => {
-  // Toggle this: true = Imam (shows input bar), false = Regular Member (read-only)
   const isImam = true; 
 
   const [messages, setMessages] = useState([
@@ -141,13 +176,13 @@ const AnnouncementsScreen = () => {
       id: '1',
       sender: 'Imam',
       text: 'Assalamu Alaikum. Jummah prayer tomorrow will begin at 1:00 PM inshaAllah.',
-      time: 'Today, 2:15 PM',
+      timestamp: Date.now() - (5 * 60 * 60 * 1000),
     },
     {
       id: '2',
       sender: 'Imam',
       text: 'Reminder: Community potluck this Sunday after Asr prayer.',
-      time: 'Yesterday, 6:00 PM',
+      timestamp: Date.now() - (24 * 60 * 60 * 1000),
     },
   ]);
 
@@ -160,7 +195,7 @@ const AnnouncementsScreen = () => {
       id: Date.now().toString(),
       sender: 'Imam',
       text: newMessage,
-      time: 'Just now',
+      timestamp: Date.now(),
     };
 
     setMessages([newEntry, ...messages]);
@@ -171,21 +206,20 @@ const AnnouncementsScreen = () => {
     <SafeAreaView style={styles.container}>
       <AppHeader />
       <View style={{ flex: 1, paddingHorizontal: 16 }}>
-        
-        {/* Messages List */}
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 10 }}>
           {messages.map((msg) => (
             <View key={msg.id} style={styles.announcementCard}>
               <View style={styles.announcementHeader}>
                 <Text style={styles.senderBadge}>🕌 {msg.sender}</Text>
-                <Text style={styles.timestampText}>{msg.time}</Text>
+                <Text style={styles.timestampText}>
+                  {msg.timestamp ? getRelativeTime(msg.timestamp) : msg.time}
+                </Text>
               </View>
               <Text style={styles.messageContent}>{msg.text}</Text>
             </View>
           ))}
         </ScrollView>
 
-        {/* Input Bar - ONLY VISIBLE TO THE IMAM */}
         {isImam && (
           <View style={styles.inputContainer}>
             <TextInput
@@ -200,42 +234,373 @@ const AnnouncementsScreen = () => {
             </TouchableOpacity>
           </View>
         )}
-
       </View>
     </SafeAreaView>
   );
 };
 
 /* -------------------------------------------------------------------------- */
-/*                            PLACEHOLDER SCREENS                             */
+/*                         TAB SCREEN 3: DIGITAL TASBIH                       */
 /* -------------------------------------------------------------------------- */
 
-const TasbihScreen = () => (
-  <SafeAreaView style={styles.container}>
-    <AppHeader />
-    <View style={styles.centeredView}>
-      <Text style={styles.placeholderText}>Digital Tasbih Screen Content</Text>
-    </View>
-  </SafeAreaView>
-);
+const INITIAL_PRAYERS = [
+  { id: '1', name: 'SubhanAllah', translation: 'Glory be to Allah', arabic: 'سُبْحَانَ ٱللَّٰهِ', symbol: 'س', color: '#00A86B', target: 33, count: 0, total: 0, sets: 0 },
+  { id: '2', name: 'Alhamdulillah', translation: 'Praise be to Allah', arabic: 'ٱلْحَمْدُ لِلَّٰهِ', symbol: 'ا', color: '#2563EB', target: 33, count: 0, total: 0, sets: 0 },
+  { id: '3', name: 'Allahu Akbar', translation: 'Allah is the Greatest', arabic: 'ٱللَّٰهُ أَكْبَرُ', symbol: 'ا', color: '#8B5CF6', target: 34, count: 0, total: 0, sets: 0 },
+  { id: '4', name: 'La ilaha illallah', translation: 'There is no god but Allah', arabic: 'لَا إِلَٰهَ إِلَّا ٱللَّٰهُ', symbol: 'ل', color: '#D97706', target: 33, count: 0, total: 0, sets: 0 },
+  { id: '5', name: 'Astaghfirullah', translation: 'I seek forgiveness from Allah', arabic: 'أَسْتَغْفِرُ ٱللَّٰهَ', symbol: 'أ', color: '#E11D48', target: 33, count: 0, total: 0, sets: 0 },
+  { id: '6', name: 'Durood Sharif', translation: 'Blessings upon the Prophet', arabic: 'ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ', symbol: 'ا', color: '#0D9488', target: 33, count: 0, total: 0, sets: 0 },
+];
 
-const QiblaScreen = () => (
-  <SafeAreaView style={styles.container}>
-    <AppHeader />
-    <View style={styles.centeredView}>
-      <Text style={styles.placeholderText}>Qibla Compass Screen Content</Text>
-    </View>
-  </SafeAreaView>
-);
+const TasbihScreen = () => {
+  const [prayers, setPrayers] = useState(INITIAL_PRAYERS);
+  const [selectedPrayerId, setSelectedPrayerId] = useState(null);
 
-const CalendarScreen = () => (
-  <SafeAreaView style={styles.container}>
-    <AppHeader />
-    <View style={styles.centeredView}>
-      <Text style={styles.placeholderText}>Calendar View Screen Content</Text>
-    </View>
-  </SafeAreaView>
-);
+  const selectedPrayer = prayers.find(p => p.id === selectedPrayerId);
+
+  const handleIncrement = (id) => {
+    setPrayers(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      const nextCount = p.count + 1;
+      const nextTotal = p.total + 1;
+      const newSets = Math.floor(nextTotal / p.target);
+      return { ...p, count: nextCount, total: nextTotal, sets: newSets };
+    }));
+  };
+
+  const handleReset = (id) => {
+    setPrayers(prev => prev.map(p => p.id === id ? { ...p, count: 0 } : p));
+  };
+
+  const adjustTarget = (id, delta) => {
+    setPrayers(prev => prev.map(p => {
+      if (p.id !== id) return p;
+      const newTarget = Math.max(1, p.target + delta);
+      return { ...p, target: newTarget };
+    }));
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <AppHeader />
+      
+      {selectedPrayer ? (
+        <View style={{ flex: 1, paddingHorizontal: 16 }}>
+          <TouchableOpacity 
+            style={styles.backButtonRow} 
+            onPress={() => setSelectedPrayerId(null)}
+          >
+            <Ionicons name="chevron-back" size={20} color="#005D3A" />
+            <Text style={styles.backButtonText}>Back to prayers</Text>
+          </TouchableOpacity>
+
+          <View style={[styles.counterBannerCard, { backgroundColor: selectedPrayer.color }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bannerPrayerName}>{selectedPrayer.name.toUpperCase()}</Text>
+              <Text style={styles.bannerPrayerSub}>{selectedPrayer.translation}</Text>
+            </View>
+            <Text style={styles.bannerArabicText}>{selectedPrayer.arabic}</Text>
+          </View>
+
+          <View style={styles.targetRow}>
+            <Text style={styles.targetLabel}>TARGET:</Text>
+            <View style={styles.targetStepper}>
+              <TouchableOpacity onPress={() => adjustTarget(selectedPrayer.id, -1)} style={styles.stepBtn}>
+                <Text style={styles.stepBtnText}>−</Text>
+              </TouchableOpacity>
+              <Text style={styles.targetValueText}>{selectedPrayer.target}</Text>
+              <TouchableOpacity onPress={() => adjustTarget(selectedPrayer.id, 1)} style={styles.stepBtn}>
+                <Text style={styles.stepBtnText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={{ alignItems: 'center', marginVertical: 20 }}>
+            <TouchableOpacity 
+              style={styles.circleCounter} 
+              activeOpacity={0.8}
+              onPress={() => handleIncrement(selectedPrayer.id)}
+            >
+              <Text style={styles.circleCountNumber}>{selectedPrayer.count}</Text>
+              <Text style={styles.circleTargetSub}>of {selectedPrayer.target}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{selectedPrayer.sets}</Text>
+              <Text style={styles.statLabel}>Sets</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{selectedPrayer.total}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{selectedPrayer.total}</Text>
+              <Text style={styles.statLabel}>Today</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.resetCounterBtn} 
+            onPress={() => handleReset(selectedPrayer.id)}
+          >
+            <Ionicons name="reload" size={16} color="#4A5568" />
+            <Text style={styles.resetCounterText}>Reset Counter</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.greenBannerCard}>
+            <Text style={styles.bannerSubLabel}>DIGITAL TASBIH</Text>
+            <Text style={styles.bannerMainTitle}>Select a Prayer</Text>
+          </View>
+
+          <View style={styles.tasbihGrid}>
+            {prayers.map((item) => (
+              <TouchableOpacity 
+                key={item.id} 
+                style={styles.tasbihGridCard}
+                onPress={() => setSelectedPrayerId(item.id)}
+              >
+                <View style={[styles.symbolBadge, { backgroundColor: item.color }]}>
+                  <Text style={styles.symbolText}>{item.symbol}</Text>
+                </View>
+                <Text style={styles.tasbihName}>{item.name}</Text>
+                <Text style={styles.tasbihTranslation} numberOfLines={1}>{item.translation}</Text>
+                {item.total > 0 && (
+                  <View style={styles.todayCountRow}>
+                    <Ionicons name="time-outline" size={12} color="#005D3A" />
+                    <Text style={styles.todayCountText}>{item.total} today</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.progressCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Ionicons name="disc-outline" size={18} color="#005D3A" style={{ marginRight: 6 }} />
+              <Text style={{ fontWeight: '700', fontSize: 14, color: '#2D3748' }}>Today's Progress</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+              {prayers.slice(0, 3).map((p) => (
+                <View key={p.id} style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: '#718096', marginBottom: 4 }}>{p.name}</Text>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${Math.min(100, (p.count / p.target) * 100)}%`, backgroundColor: p.color }]} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      )}
+    </SafeAreaView>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                          TAB SCREEN 4: QIBLA COMPASS                        */
+/* -------------------------------------------------------------------------- */
+
+const QiblaScreen = () => {
+  const [location, setLocation] = useState(null);
+  const [qiblaDegree, setQiblaDegree] = useState(55); 
+  const [distance, setDistance] = useState('12,891');
+  const [magnetometer, setMagnetometer] = useState(0);
+
+  const MAKKAH_LAT = 21.4225;
+  const MAKKAH_LNG = 39.8262;
+
+  const calculateQibla = (lat, lng) => {
+    const phi1 = (lat * Math.PI) / 180;
+    const phi2 = (MAKKAH_LAT * Math.PI) / 180;
+    const lambda1 = (lng * Math.PI) / 180;
+    const lambda2 = (MAKKAH_LNG * Math.PI) / 180;
+
+    const y = Math.sin(lambda2 - lambda1);
+    const x = Math.cos(phi1) * Math.tan(phi2) - Math.sin(phi1) * Math.cos(lambda2 - lambda1);
+    let qibla = (Math.atan2(y, x) * 180) / Math.PI;
+    qibla = (qibla + 360) % 360;
+    setQiblaDegree(Math.round(qibla));
+
+    const R = 6371; 
+    const dLat = phi2 - phi1;
+    const dLng = lambda2 - lambda1;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const dist = Math.round(R * c);
+    setDistance(dist.toLocaleString());
+  };
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        let userLocation = await Location.getCurrentPositionAsync({});
+        const { latitude, longitude } = userLocation.coords;
+        setLocation({ latitude, longitude });
+        calculateQibla(latitude, longitude);
+      }
+    })();
+
+    Magnetometer.setUpdateInterval(100);
+    const subscription = Magnetometer.addListener(data => {
+      let { x, y } = data;
+      let angle = Math.atan2(y, x) * (180 / Math.PI);
+      if (angle < 0) angle += 360;
+      setMagnetometer(Math.round(angle));
+    });
+
+    return () => subscription.remove();
+  }, []);
+
+  const needleRotation = (qiblaDegree - magnetometer + 360) % 360;
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <AppHeader />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        
+        <View style={styles.greenBannerCard}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={styles.bannerSubLabel}>QIBLA DIRECTION</Text>
+              <Text style={styles.bannerMainTitle}>Makkah</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.bannerSubLabel}>DISTANCE</Text>
+              <Text style={styles.bannerMainTitle}>{distance} km</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.compassWrapper}>
+          <View style={styles.compassOuterCircle}>
+            <View style={[styles.needleContainer, { transform: [{ rotate: `${needleRotation}deg` }] }]}>
+              <View style={styles.needlePointer} />
+              <View style={styles.needleTail} />
+            </View>
+
+            <View style={styles.compassCenterBadge}>
+              <Text style={styles.compassDegreeText}>{qiblaDegree}°</Text>
+              <Text style={styles.compassSubLabel}>QIBLA</Text>
+            </View>
+
+            <Text style={[styles.cardinalMark, { top: 12 }]}>N</Text>
+            <Text style={[styles.cardinalMark, { right: 16 }]}>E</Text>
+            <Text style={[styles.cardinalMark, { bottom: 12 }]}>S</Text>
+            <Text style={[styles.cardinalMark, { left: 16 }]}>W</Text>
+          </View>
+        </View>
+
+        <View style={styles.instructionCard}>
+          <View style={styles.navigationIconCircle}>
+            <Ionicons name="navigate-outline" size={20} color="#005D3A" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.instructionTitle}>Point the top of your phone</Text>
+            <Text style={styles.instructionSub}>When the green needle points up, you're facing Qibla</Text>
+          </View>
+        </View>
+
+        <View style={styles.locationInfoCard}>
+          <Ionicons name="location-outline" size={16} color="#718096" style={{ marginRight: 6 }} />
+          <Text style={styles.locationInfoTitle}>YOUR LOCATION</Text>
+          {location ? (
+            <Text style={styles.coordsText}>{location.latitude.toFixed(4)}°N,  {location.longitude.toFixed(4)}°W</Text>
+          ) : (
+            <Text style={styles.coordsText}>17.5157°N,  -88.2256°W</Text>
+          )}
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                       TAB SCREEN 5: KHUTBA (SERMONS)                       */
+/* -------------------------------------------------------------------------- */
+
+const KhutbaScreen = () => {
+  const latestSermon = {
+    title: "Friday Sermon - 16th October 2026",
+    speaker: "Hazrat Mirza Masroor Ahmad (aa)",
+    location: "Masjid Mubarak, Tilford, UK",
+    youtubeUrl: "https://www.youtube.com/watch?v=sJZvP9AmB9g",
+    summary: [
+      "His Holiness (aa) delivered the Friday Sermon highlighting key virtues of spiritual reform, moderation, and unwavering trust in Allah.",
+      "His Holiness emphasized the vital importance of remaining steadfast in daily prayers, upholding high moral conduct, and safeguarding local community bonds.",
+      "A special prayer request was made for peace across the world and for the protection and prosperity of the global Jam'at."
+    ]
+  };
+
+  const handleOpenYouTube = () => {
+    Linking.openURL(latestSermon.youtubeUrl);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <AppHeader />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        
+        {/* Top Banner */}
+        <View style={styles.greenBannerCard}>
+          <Text style={styles.bannerSubLabel}>BELOVED HUZOOR'S (AA)</Text>
+          <Text style={styles.bannerMainTitle}>Friday Sermon</Text>
+        </View>
+
+        {/* Video Card Container */}
+        <View style={styles.sermonCard}>
+          <View style={styles.sermonHeaderRow}>
+            <Text style={styles.sermonBadge}>LATEST KHUTBA</Text>
+            <Text style={styles.sermonDate}>Oct 16, 2026</Text>
+          </View>
+          
+          <Text style={styles.sermonTitle}>{latestSermon.title}</Text>
+          <Text style={styles.sermonSubText}>By {latestSermon.speaker}</Text>
+          <Text style={styles.sermonLocationText}>📍 {latestSermon.location}</Text>
+
+          {/* YouTube Launch Button */}
+          <TouchableOpacity 
+            style={styles.youtubeButton} 
+            activeOpacity={0.85}
+            onPress={handleOpenYouTube}
+          >
+            <Ionicons name="logo-youtube" size={26} color="#FF0000" />
+            <Text style={styles.youtubeButtonText}>Watch Live on YouTube</Text>
+            <Ionicons name="open-outline" size={16} color="#2D3748" style={{ marginLeft: 6 }} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Summary Box */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryHeaderRow}>
+            <Ionicons name="document-text-outline" size={18} color="#005D3A" />
+            <Text style={styles.summaryTitle}>ENGLISH SUMMARY</Text>
+          </View>
+          
+          {latestSermon.summary.map((point, index) => (
+            <View key={index} style={styles.bulletRow}>
+              <Text style={styles.bulletPoint}>•</Text>
+              <Text style={styles.summaryText}>{point}</Text>
+            </View>
+          ))}
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+/* -------------------------------------------------------------------------- */
+/*                            SETTINGS SCREEN                                 */
+/* -------------------------------------------------------------------------- */
 
 const SettingsScreen = () => (
   <SafeAreaView style={styles.container}>
@@ -259,9 +624,12 @@ export default function App() {
           tabBarActiveTintColor: '#005D3A',
           tabBarInactiveTintColor: '#8E8E93',
           tabBarStyle: {
-            height: 65,
-            paddingBottom: 10,
-            paddingTop: 5,
+            height: 70,
+            paddingBottom: 12,
+            paddingTop: 8,
+            marginBottom: 10,
+            marginHorizontal: 10,
+            borderRadius: 20,
           },
           tabBarIcon: ({ color, size }) => {
             let iconName;
@@ -269,7 +637,7 @@ export default function App() {
             else if (route.name === 'Announce') iconName = 'megaphone-outline';
             else if (route.name === 'Tasbih') iconName = 'disc-outline';
             else if (route.name === 'Qibla') iconName = 'compass-outline';
-            else if (route.name === 'Calendar') iconName = 'calendar-outline';
+            else if (route.name === 'Khutba') iconName = 'tv-outline';
             else if (route.name === 'Settings') iconName = 'settings-outline';
 
             return <Ionicons name={iconName} size={size} color={color} />;
@@ -280,7 +648,7 @@ export default function App() {
         <Tab.Screen name="Announce" component={AnnouncementsScreen} />
         <Tab.Screen name="Tasbih" component={TasbihScreen} />
         <Tab.Screen name="Qibla" component={QiblaScreen} />
-        <Tab.Screen name="Calendar" component={CalendarScreen} />
+        <Tab.Screen name="Khutba" component={KhutbaScreen} />
         <Tab.Screen name="Settings" component={SettingsScreen} />
       </Tab.Navigator>
     </NavigationContainer>
@@ -299,7 +667,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 25,
   },
   centeredView: {
     flex: 1,
@@ -387,7 +755,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 20,
     flexDirection: 'row',
-    justify.content: 'space-between',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
     shadowColor: '#000',
@@ -436,6 +804,51 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontSize: 10,
     fontWeight: '800',
+  },
+
+  // Prayer of the Day Box
+  prayerOfDayCard: {
+    backgroundColor: '#EDF2F7',
+    borderRadius: 15,
+    padding: 18,
+    marginTop: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  prayerOfDayHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  prayerOfDayTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#718096',
+    letterSpacing: 0.8,
+  },
+  prayerOfDayBadge: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#005D3A',
+    backgroundColor: '#E6FFFA',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  prayerOfDayItalicText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#2D3748',
+    lineHeight: 22,
+  },
+  prayerOfDaySource: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4A5568',
+    marginTop: 8,
+    textAlign: 'right',
   },
 
   // Announcement Screen Styling
@@ -498,5 +911,437 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  // Tasbih Screen Styling
+  tasbihGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  tasbihGridCard: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  symbolBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  symbolText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  tasbihName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2D3748',
+    marginBottom: 2,
+  },
+  tasbihTranslation: {
+    fontSize: 12,
+    color: '#A0AEC0',
+    marginBottom: 6,
+  },
+  todayCountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  todayCountText: {
+    fontSize: 11,
+    color: '#005D3A',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  progressCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 8,
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 3,
+    width: '80%',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+
+  // Counter View Specific Styling
+  backButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+  backButtonText: {
+    color: '#005D3A',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 4,
+  },
+  counterBannerCard: {
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  bannerPrayerName: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  bannerPrayerSub: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  bannerArabicText: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  targetRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  targetLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#A0AEC0',
+    marginRight: 10,
+  },
+  targetStepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  stepBtn: {
+    paddingHorizontal: 8,
+  },
+  stepBtnText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#4A5568',
+  },
+  targetValueText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#2D3748',
+    marginHorizontal: 12,
+  },
+  circleCounter: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 6,
+    borderColor: '#005D3A',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  circleCountNumber: {
+    fontSize: 52,
+    fontWeight: '800',
+    color: '#2D3748',
+  },
+  circleTargetSub: {
+    fontSize: 13,
+    color: '#A0AEC0',
+    fontWeight: '600',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 14,
+    marginVertical: 10,
+  },
+  statBox: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#005D3A',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#A0AEC0',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
+  },
+  resetCounterBtn: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#EDF2F7',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 10,
+  },
+  resetCounterText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4A5568',
+    marginLeft: 6,
+  },
+
+  // Qibla Compass Styles
+  compassWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 20,
+  },
+  compassOuterCircle: {
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  compassCenterBadge: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 3,
+    borderColor: '#005D3A',
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  compassDegreeText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#005D3A',
+  },
+  compassSubLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#A0AEC0',
+    letterSpacing: 0.5,
+  },
+  cardinalMark: {
+    position: 'absolute',
+    fontWeight: '800',
+    fontSize: 14,
+    color: '#4A5568',
+  },
+  needleContainer: {
+    position: 'absolute',
+    width: 14,
+    height: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  needlePointer: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderBottomWidth: 100,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#005D3A',
+  },
+  needleTail: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 100,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#CBD5E0',
+  },
+  instructionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  navigationIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  instructionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2D3748',
+  },
+  instructionSub: {
+    fontSize: 12,
+    color: '#718096',
+    marginTop: 2,
+  },
+  locationInfoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  locationInfoTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#A0AEC0',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  coordsText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2D3748',
+  },
+
+  // Khutba Screen Styles
+  sermonCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sermonHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sermonBadge: {
+    backgroundColor: '#DCFCE7',
+    color: '#005D3A',
+    fontSize: 10,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  sermonDate: {
+    fontSize: 12,
+    color: '#A0AEC0',
+    fontWeight: '600',
+  },
+  sermonTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2D3748',
+    marginBottom: 4,
+  },
+  sermonSubText: {
+    fontSize: 13,
+    color: '#005D3A',
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  sermonLocationText: {
+    fontSize: 12,
+    color: '#718096',
+    marginBottom: 14,
+  },
+  youtubeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFEDD5',
+    borderColor: '#FED7AA',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  youtubeButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#9A3412',
+    marginLeft: 8,
+  },
+  summaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 16,
+  },
+  summaryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  summaryTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#005D3A',
+    letterSpacing: 0.8,
+    marginLeft: 6,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  bulletPoint: {
+    fontSize: 16,
+    color: '#005D3A',
+    marginRight: 8,
+    lineHeight: 20,
+  },
+  summaryText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#4A5568',
+    lineHeight: 20,
   },
 });
