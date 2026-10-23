@@ -21,34 +21,119 @@ import {
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { Magnetometer } from 'expo-sensors';
-import * as Location from 'expo-location';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const Tab = createBottomTabNavigator();
 
+// Default Admin Secret PIN for Imam
+const ADMIN_PIN = "1234";
+
 // Local 19-Page Salat Pamphlet Images Array
-// Note: Ensure images exist in assets/salat_guide/
 const salatPages = [
-  require('./assets/salat_guide/page_1.png'),
-  require('./assets/salat_guide/page_2.png'),
-  require('./assets/salat_guide/page_3.png'),
-  require('./assets/salat_guide/page_4.png'),
-  require('./assets/salat_guide/page_5.png'),
-  require('./assets/salat_guide/page_6.png'),
-  require('./assets/salat_guide/page_7.png'),
-  require('./assets/salat_guide/page_8.png'),
-  require('./assets/salat_guide/page_9.png'),
-  require('./assets/salat_guide/page_10.png'),
-  require('./assets/salat_guide/page_11.png'),
-  require('./assets/salat_guide/page_12.png'),
-  require('./assets/salat_guide/page_13.png'),
-  require('./assets/salat_guide/page_14.png'),
-  require('./assets/salat_guide/page_15.png'),
-  require('./assets/salat_guide/page_16.png'),
-  require('./assets/salat_guide/page_17.png'),
-  require('./assets/salat_guide/page_18.png'),
-  require('./assets/salat_guide/page_19.png'),
+  require('./assets/salat_guide/1.png'),
+  require('./assets/salat_guide/2.png'),
+  require('./assets/salat_guide/3.png'),
+  require('./assets/salat_guide/4.png'),
+  require('./assets/salat_guide/5.png'),
+  require('./assets/salat_guide/6.png'),
+  require('./assets/salat_guide/7.png'),
+  require('./assets/salat_guide/8.png'),
+  require('./assets/salat_guide/9.png'),
+  require('./assets/salat_guide/10.png'),
+  require('./assets/salat_guide/11.png'),
+  require('./assets/salat_guide/12.png'),
+  require('./assets/salat_guide/13.png'),
+  require('./assets/salat_guide/14.png'),
+  require('./assets/salat_guide/15.png'),
+  require('./assets/salat_guide/16.png'),
+  require('./assets/salat_guide/17.png'),
+  require('./assets/salat_guide/18.png'),
+  require('./assets/salat_guide/19.png'),
+];
+
+// Local 8-Page Articles of Faith Images Array
+const articlesOfFaithPages = [
+  require('./assets/Articles_of_faith_guide/1.png'),
+  require('./assets/Articles_of_faith_guide/2.png'),
+  require('./assets/Articles_of_faith_guide/3.png'),
+  require('./assets/Articles_of_faith_guide/4.png'),
+  require('./assets/Articles_of_faith_guide/5.png'),
+  require('./assets/Articles_of_faith_guide/6.png'),
+  require('./assets/Articles_of_faith_guide/7.png'),
+  require('./assets/Articles_of_faith_guide/8.png'),
+];
+
+// Pamphlet Library Configuration
+const PAMPHLETS = [
+  {
+    id: 'salat',
+    title: 'Learn Salat Guide',
+    subtitle: 'Step-by-step prayer guide (19 Pages)',
+    icon: 'book-outline',
+    pages: salatPages,
+  },
+  {
+    id: 'wudu',
+    title: 'Wudu (Ablution) Guide',
+    subtitle: 'Step-by-step guide to performing Wudu',
+    icon: 'water-outline',
+    pages: [
+      require('./assets/wudu_guide/wudu.png'),
+    ],
+  },
+  {
+    id: 'articles_faith',
+    title: 'Articles of Faith',
+    subtitle: 'The 6 fundamental beliefs in Islam (8 Pages)',
+    icon: 'sparkles-outline',
+    pages: articlesOfFaithPages,
+  },
+  {
+    id: 'pillars_islam',
+    title: 'Five Pillars of Islam',
+    subtitle: 'The foundational pillars of Islamic practice',
+    icon: 'shapes-outline',
+    pages: [
+      require('./assets/Five_pillars_of_Islam_guide/1.png'),
+    ],
+  },
+  {
+    id: 'daily_prayers_guide',
+    title: 'Five Daily Prayers Guide',
+    subtitle: 'Overview of the 5 prescribed daily prayers',
+    icon: 'time-outline',
+    pages: [
+      require('./assets/Five_daily_prayers_guide/2.png'),
+    ],
+  },
+  {
+    id: 'veil',
+    title: 'The Islamic Veil',
+    subtitle: 'Understanding modesty in Islam',
+    icon: 'shirt-outline',
+    pages: [], 
+  },
+  {
+    id: 'messiah',
+    title: 'The Messiah Has Come',
+    subtitle: 'The advent of the Promised Messiah (as)',
+    icon: 'star-outline',
+    pages: [], 
+  },
+  {
+    id: 'bible',
+    title: 'Muhammad In The Bible',
+    subtitle: 'Biblical prophecies regarding the Holy Prophet (saw)',
+    icon: 'journal-outline',
+    pages: [], 
+  },
+  {
+    id: 'jihad',
+    title: 'Jihad: The True Concept',
+    subtitle: 'Explaining the peaceful reality of Jihad',
+    icon: 'shield-checkmark-outline',
+    pages: [], 
+  },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -71,8 +156,10 @@ const AppHeader = () => {
 /*                             TAB SCREEN 1: TIMES                            */
 /* -------------------------------------------------------------------------- */
 
-const PrayerTimesScreen = () => {
+const PrayerTimesScreen = ({ prayerData, isImam, onUpdatePrayerTimes }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTimes, setEditTimes] = useState([...prayerData]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -82,29 +169,25 @@ const PrayerTimesScreen = () => {
   const options = { weekday: 'long', month: 'long', day: 'numeric' };
   const formattedDate = currentTime.toLocaleDateString('en-US', options);
 
-  const prayerData = [
-    { name: 'Fajr', time: '4:45 AM', hour: 4, minute: 45 },
-    { name: 'Zuhr', time: '1:00 PM', hour: 13, minute: 0 },
-    { name: 'Asr', time: '3:30 PM', hour: 15, minute: 30 },
-    { name: 'Maghrib', time: '6:30 PM', hour: 18, minute: 30 },
-    { name: 'Isha', time: '6:30 PM', hour: 18, minute: 30 },
-  ];
-
+  // List of Daily Prayers with direct links to exact sources
   const dailyPrayers = [
     {
       type: 'Holy Qur\'an',
       reference: 'Surah Al-Baqarah (2:202)',
-      text: '"Our Lord, grant us good in this world and good in the Hereafter, and protect us from the torment of the Fire."'
+      text: '"Our Lord, grant us good in this world and good in the Hereafter, and protect us from the torment of the Fire."',
+      url: 'https://www.alislam.org/quran/app/2:202'
     },
     {
       type: 'Holy Prophet (saw)',
-      reference: 'Sunan Ibn Majah',
-      text: '"O Allah, I ask You for beneficial knowledge, good acceptable provision, and deeds that are accepted."'
+      reference: 'Sunan Ibn Majah (Hadith 925)',
+      text: '"O Allah, I ask You for beneficial knowledge, good acceptable provision, and deeds that are accepted."',
+      url: 'https://sunnah.com/urn/1309770'
     },
     {
       type: 'Promised Messiah (as)',
-      reference: 'Tazkirah',
-      text: '"Lord, everything is at Your service; so O Lord, protect me, help me, and have mercy on me."'
+      reference: 'Tazkirah (Page 623)',
+      text: '"Lord, everything is at Your service; so O Lord, protect me, help me, and have mercy on me."',
+      url: 'https://new.alislam.org/library/books/tadhkirah?option=search&page=623&search=%D9%85%D8%A7%D9%84%DA%A9%D8%8C+%D8%B3%D8%A8+%DA%A9%DA%86%DA%BE+%D8%A2%D9%BE+%DA%A9%DB%81+%D8%AE%D8%AF%D9%85%D8%AA+%D9%85%DB%81+%DB%81%DB%92%D8%9B+%D8%AA%D9%88+%D8%A7%DB%92+%D9%85%D8%A7%D9%84%DA%A9%D8%8C+%D9%85%DB%81+%D8%AD%D9%81%D8%A7%D8%B8%D8%AA+%DA%A9%D8%B1%DB%81%D8%8C+%D9%85%DB%81+%D9%85%D8%AF%D8%AF+%DA%A9%D8%B1%DB%81%D8%8C+%D8%A7%D9%88%D8%B1+%D9%85%D8%AC%DA%BE+%D9%BE%D8%B1+%D8%B1%D8%AD%D9%85+%DA%A9%D8%B1%DB%81%DB%94'
     }
   ];
 
@@ -121,6 +204,22 @@ const PrayerTimesScreen = () => {
   const epochDays = Math.floor(currentTime.getTime() / (1000 * 60 * 60 * 24));
   const activeDayIndex = currentMinutes >= fajrMinutes ? epochDays : epochDays - 1;
   const todayPrayer = dailyPrayers[Math.abs(activeDayIndex) % dailyPrayers.length];
+
+  const handleOpenPrayerLink = (url) => {
+    Linking.openURL(url);
+  };
+
+  const handleTimeInputChange = (index, value) => {
+    const updated = [...editTimes];
+    updated[index].time = value;
+    setEditTimes(updated);
+  };
+
+  const handleSaveTimes = () => {
+    onUpdatePrayerTimes(editTimes);
+    setIsEditing(false);
+    Alert.alert("Prayer Times Updated", "The new prayer schedule has been saved successfully.");
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -139,39 +238,79 @@ const PrayerTimesScreen = () => {
           </View>
         </View>
 
-        {prayerData.map((item, index) => {
-          const isNext = index === nextPrayerIndex;
-          return (
-            <View 
-              key={index} 
-              style={[styles.prayerRowCard, isNext && styles.nextPrayerHighlight]}
-            >
-              <View style={styles.prayerNameContainer}>
-                {isNext && <View style={styles.greenDot} />}
-                <Text style={[styles.prayerNameText, isNext && styles.nextPrayerText]}>
-                  {item.name}
-                </Text>
-                {isNext && (
-                  <View style={styles.nextBadge}>
-                    <Text style={styles.nextBadgeText}>NEXT</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={[styles.prayerTimeText, isNext && styles.nextPrayerText]}>
-                {item.time}
-              </Text>
-            </View>
-          );
-        })}
+        {isImam && (
+          <TouchableOpacity 
+            style={styles.adminEditBar}
+            onPress={() => setIsEditing(!isEditing)}
+          >
+            <Ionicons name={isEditing ? "close-circle-outline" : "create-outline"} size={18} color="#005D3A" />
+            <Text style={styles.adminEditText}>
+              {isEditing ? "Cancel Editing Times" : "Admin: Edit Prayer Times"}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        <View style={styles.prayerOfDayCard}>
+        {isEditing ? (
+          <View style={styles.editFormCard}>
+            <Text style={styles.formHeaderTitle}>Update Belize City Prayer Schedule</Text>
+            {editTimes.map((item, index) => (
+              <View key={index} style={styles.prayerEditRow}>
+                <Text style={styles.prayerEditLabel}>{item.name}</Text>
+                <TextInput
+                  style={styles.prayerEditInput}
+                  value={item.time}
+                  onChangeText={(val) => handleTimeInputChange(index, val)}
+                  placeholder="e.g. 5:00 AM"
+                />
+              </View>
+            ))}
+            <TouchableOpacity style={styles.saveSermonBtn} onPress={handleSaveTimes}>
+              <Text style={styles.saveSermonBtnText}>Save Updated Times</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          prayerData.map((item, index) => {
+            const isNext = index === nextPrayerIndex;
+            return (
+              <View 
+                key={index} 
+                style={[styles.prayerRowCard, isNext && styles.nextPrayerHighlight]}
+              >
+                <View style={styles.prayerNameContainer}>
+                  {isNext && <View style={styles.greenDot} />}
+                  <Text style={[styles.prayerNameText, isNext && styles.nextPrayerText]}>
+                    {item.name}
+                  </Text>
+                  {isNext && (
+                    <View style={styles.nextBadge}>
+                      <Text style={styles.nextBadgeText}>NEXT</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.prayerTimeText, isNext && styles.nextPrayerText]}>
+                  {item.time}
+                </Text>
+              </View>
+            );
+          })
+        )}
+
+        {/* CLICKABLE PRAYER OF THE DAY CARD */}
+        <TouchableOpacity 
+          style={styles.prayerOfDayCard}
+          activeOpacity={0.85}
+          onPress={() => handleOpenPrayerLink(todayPrayer.url)}
+        >
           <View style={styles.prayerOfDayHeaderRow}>
             <Text style={styles.prayerOfDayTitle}>PRAYER OF THE DAY</Text>
-            <Text style={styles.prayerOfDayBadge}>{todayPrayer.type}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={styles.prayerOfDayBadge}>{todayPrayer.type}</Text>
+              <Ionicons name="open-outline" size={14} color="#005D3A" style={{ marginLeft: 6 }} />
+            </View>
           </View>
           <Text style={styles.prayerOfDayItalicText}>{todayPrayer.text}</Text>
-          <Text style={styles.prayerOfDaySource}>— {todayPrayer.reference}</Text>
-        </View>
+          <Text style={styles.prayerOfDaySource}>— {todayPrayer.reference} (Tap to view source)</Text>
+        </TouchableOpacity>
 
       </ScrollView>
     </SafeAreaView>
@@ -194,9 +333,7 @@ const getRelativeTime = (timestamp) => {
   return `${diffInDays}d ago`;
 };
 
-const AnnouncementsScreen = () => {
-  const isImam = true; 
-
+const AnnouncementsScreen = ({ isImam }) => {
   const [messages, setMessages] = useState([
     {
       id: '1',
@@ -246,7 +383,7 @@ const AnnouncementsScreen = () => {
           ))}
         </ScrollView>
 
-        {isImam && (
+        {isImam ? (
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.textInput}
@@ -259,6 +396,13 @@ const AnnouncementsScreen = () => {
               <Ionicons name="send" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
+        ) : (
+          <View style={styles.readOnlyBanner}>
+            <Ionicons name="lock-closed-outline" size={14} color="#718096" />
+            <Text style={styles.readOnlyBannerText}>
+              Broadcasts are published by the Imam. Login as Admin in Settings to post.
+            </Text>
+          </View>
         )}
       </View>
     </SafeAreaView>
@@ -266,23 +410,106 @@ const AnnouncementsScreen = () => {
 };
 
 /* -------------------------------------------------------------------------- */
-/*                        TAB SCREEN 3: PRAYERS & TASBIH                      */
+/*--------                TAB SCREEN 3: PRAYERS & TASBIH              --------*/
 /* -------------------------------------------------------------------------- */
 
 const INITIAL_PRAYERS = [
-  { id: '1', name: 'SubhanAllah', translation: 'Glory be to Allah', arabic: 'سُبْحَانَ ٱللَّٰهِ', symbol: 'س', color: '#00A86B', target: 33, count: 0, total: 0, sets: 0 },
-  { id: '2', name: 'Alhamdulillah', translation: 'Praise be to Allah', arabic: 'ٱلْحَمْدُ لِلَّٰهِ', symbol: 'ا', color: '#2563EB', target: 33, count: 0, total: 0, sets: 0 },
-  { id: '3', name: 'Allahu Akbar', translation: 'Allah is the Greatest', arabic: 'ٱللَّٰهُ أَكْبَرُ', symbol: 'ا', color: '#8B5CF6', target: 34, count: 0, total: 0, sets: 0 },
-  { id: '4', name: 'La ilaha illallah', translation: 'There is no god but Allah', arabic: 'لَا إِلَٰهَ إِلَّا ٱللَّٰهُ', symbol: 'ل', color: '#D97706', target: 33, count: 0, total: 0, sets: 0 },
-  { id: '5', name: 'Astaghfirullah', translation: 'I seek forgiveness from Allah', arabic: 'أَسْتَغْفِرُ ٱللَّٰهَ', symbol: 'أ', color: '#E11D48', target: 33, count: 0, total: 0, sets: 0 },
-  { id: '6', name: 'Durood Sharif', translation: 'Blessings upon the Prophet', arabic: 'ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ', symbol: 'ا', color: '#0D9488', target: 33, count: 0, total: 0, sets: 0 },
+  { 
+    id: '1', 
+    name: 'SubhanAllah', 
+    transliteration: 'SubhanAllah',
+    translation: 'Glory be to Allah', 
+    arabic: 'سُبْحَانَ ٱللَّٰهِ', 
+    symbol: 'س', 
+    color: '#00A86B', 
+    target: 33, 
+    count: 0, 
+    total: 0, 
+    sets: 0 
+  },
+  { 
+    id: '2', 
+    name: 'Alhamdulillah', 
+    transliteration: 'Alhamdulillah',
+    translation: 'Praise be to Allah', 
+    arabic: 'ٱلْحَمْدُ لِلَّٰهِ', 
+    symbol: 'ا', 
+    color: '#2563EB', 
+    target: 33, 
+    count: 0, 
+    total: 0, 
+    sets: 0 
+  },
+  { 
+    id: '3', 
+    name: 'Allahu Akbar', 
+    transliteration: 'Allahu Akbar',
+    translation: 'Allah is the Greatest', 
+    arabic: 'ٱللَّٰهُ أَكْبَرُ', 
+    symbol: 'ا', 
+    color: '#8B5CF6', 
+    target: 34, 
+    count: 0, 
+    total: 0, 
+    sets: 0 
+  },
+  { 
+    id: '4', 
+    name: 'La ilaha illallah', 
+    transliteration: 'La ilaha illallah',
+    translation: 'There is no god but Allah', 
+    arabic: 'لَا إِلَٰهَ إِلَّا ٱللَّٰهُ', 
+    symbol: 'ل', 
+    color: '#D97706', 
+    target: 33, 
+    count: 0, 
+    total: 0, 
+    sets: 0 
+  },
+  { 
+    id: '5', 
+    name: 'Astaghfirullah', 
+    transliteration: 'Astaghfirullaha Rabbi min kulli zanbin wa atubu ilaih',
+    translation: 'I seek forgiveness from Allah, my Lord, for all my sins and turn to Him in repentance.', 
+    arabic: 'أَسْتَغْفِرُ ٱللَّٰهَ رَبِّي مِنْ كُلِّ ذَنْبٍ وَأَتُوبُ إِلَيْهِ', 
+    symbol: 'أ', 
+    color: '#E11D48', 
+    target: 100, 
+    count: 0, 
+    total: 0, 
+    sets: 0 
+  },
+  { 
+    id: '6', 
+    name: 'Durood Sharif', 
+    transliteration: 'Allahumma salli ala Muhammadin wa aali Muhammad',
+    translation: 'O Allah, send blessings upon Muhammad and upon the people of Muhammad.', 
+    arabic: 'ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ وَآلِ مُحَمَّدٍ', 
+    symbol: 'ا', 
+    color: '#0D9488', 
+    target: 200, 
+    count: 0, 
+    total: 0, 
+    sets: 0 
+  },
+  { 
+    id: '7', 
+    name: 'Rabbi Kulli Shai’in', 
+    transliteration: 'Rabbi kullu sha’in khadimuka rabbi fahfazni wansurni warhamni',
+    translation: 'O Lord, everything is at Your service; so O Lord, protect me, help me, and have mercy on me.', 
+    arabic: 'رَبِّ كُلُّ شَيْءٍ خَادِمُكَ رَبِّ فَاحْفَظْنِي وَانْصُرْنِي وَارْحَمْنِي', 
+    symbol: 'ر', 
+    color: '#7C3AED', 
+    target: 100, 
+    count: 0, 
+    total: 0, 
+    sets: 0 
+  },
 ];
 
 const PrayersScreen = () => {
   const [prayers, setPrayers] = useState(INITIAL_PRAYERS);
   const [selectedPrayerId, setSelectedPrayerId] = useState(null);
-  const [pamphletModalVisible, setPamphletModalVisible] = useState(false);
-  const [activePageIndex, setActivePageIndex] = useState(0);
 
   const selectedPrayer = prayers.find(p => p.id === selectedPrayerId);
 
@@ -308,17 +535,12 @@ const PrayersScreen = () => {
     }));
   };
 
-  const handleScroll = (event) => {
-    const slide = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-    setActivePageIndex(slide);
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader />
       
       {selectedPrayer ? (
-        <View style={{ flex: 1, paddingHorizontal: 16 }}>
+        <ScrollView style={{ flex: 1, paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
           <TouchableOpacity 
             style={styles.backButtonRow} 
             onPress={() => setSelectedPrayerId(null)}
@@ -328,11 +550,19 @@ const PrayersScreen = () => {
           </TouchableOpacity>
 
           <View style={[styles.counterBannerCard, { backgroundColor: selectedPrayer.color }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.bannerPrayerName}>{selectedPrayer.name.toUpperCase()}</Text>
-              <Text style={styles.bannerPrayerSub}>{selectedPrayer.translation}</Text>
-            </View>
+            <Text style={styles.bannerPrayerName}>{selectedPrayer.name.toUpperCase()}</Text>
+            
             <Text style={styles.bannerArabicText}>{selectedPrayer.arabic}</Text>
+
+            <View style={styles.bannerSectionBox}>
+              <Text style={styles.bannerSectionLabel}>PRONUNCIATION:</Text>
+              <Text style={styles.bannerPhoneticText}>{selectedPrayer.transliteration}</Text>
+            </View>
+
+            <View style={styles.bannerSectionBox}>
+              <Text style={styles.bannerSectionLabel}>TRANSLATION:</Text>
+              <Text style={styles.bannerTranslationText}>{selectedPrayer.translation}</Text>
+            </View>
           </View>
 
           <View style={styles.targetRow}>
@@ -383,29 +613,13 @@ const PrayersScreen = () => {
             <Ionicons name="reload" size={16} color="#4A5568" />
             <Text style={styles.resetCounterText}>Reset Counter</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.greenBannerCard}>
             <Text style={styles.bannerSubLabel}>DAILY REMEMBRANCE</Text>
             <Text style={styles.bannerMainTitle}>Prayers & Tasbih</Text>
           </View>
-
-          {/* LEARN SALAT PAMPHLET BUTTON */}
-          <TouchableOpacity 
-            style={styles.learnSalatCard} 
-            activeOpacity={0.85}
-            onPress={() => setPamphletModalVisible(true)}
-          >
-            <View style={styles.learnSalatIconCircle}>
-              <Ionicons name="book-outline" size={24} color="#005D3A" />
-            </View>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.learnSalatTitle}>Learn Salat Guide</Text>
-              <Text style={styles.learnSalatSub}>Interactive 19-page prayer guide</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#005D3A" />
-          </TouchableOpacity>
 
           <View style={styles.tasbihGrid}>
             {prayers.map((item) => (
@@ -418,7 +632,8 @@ const PrayersScreen = () => {
                   <Text style={styles.symbolText}>{item.symbol}</Text>
                 </View>
                 <Text style={styles.tasbihName}>{item.name}</Text>
-                <Text style={styles.tasbihTranslation} numberOfLines={1}>{item.translation}</Text>
+                <Text style={styles.tasbihPhonetic} numberOfLines={1}>{item.transliteration}</Text>
+                <Text style={styles.tasbihTranslation} numberOfLines={2}>{item.translation}</Text>
                 {item.total > 0 && (
                   <View style={styles.todayCountRow}>
                     <Ionicons name="time-outline" size={12} color="#005D3A" />
@@ -428,113 +643,55 @@ const PrayersScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
-        </ScrollView>
-      )}
 
-      {/* FULL-SCREEN 19-PAGE PAMPHLET MODAL VIEWER */}
-      <Modal 
-        visible={pamphletModalVisible} 
-        animationType="slide" 
-        onRequestClose={() => setPamphletModalVisible(false)}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#1A202C' }}>
-          
-          {/* Modal Header Bar */}
-          <View style={styles.pamphletHeaderBar}>
-            <TouchableOpacity onPress={() => setPamphletModalVisible(false)} style={styles.closeModalBtn}>
-              <Ionicons name="close" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-            <Text style={styles.pamphletHeaderTitle}>Learn Salat Booklet</Text>
-            <Text style={styles.pamphletPageIndicator}>
-              {activePageIndex + 1} / {salatPages.length}
-            </Text>
+          {/* TODAY'S PROGRESS TRACKER CARD */}
+          <View style={styles.progressCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Ionicons name="disc-outline" size={18} color="#005D3A" style={{ marginRight: 6 }} />
+              <Text style={{ fontWeight: '700', fontSize: 14, color: '#2D3748' }}>Today's Progress</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+              {prayers.slice(0, 3).map((p) => (
+                <View key={p.id} style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: '#718096', marginBottom: 4 }}>{p.name}</Text>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${Math.min(100, (p.count / p.target) * 100)}%`, backgroundColor: p.color }]} />
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
 
-          {/* Swipeable Page Gallery */}
-          <ScrollView 
-            horizontal 
-            pagingEnabled 
-            showsHorizontalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            style={{ flex: 1 }}
-          >
-            {salatPages.map((pageSrc, idx) => (
-              <View key={idx} style={styles.pamphletPageSlide}>
-                <Image 
-                  source={pageSrc} 
-                  style={styles.pamphletImage} 
-                  resizeMode="contain" 
-                />
-              </View>
-            ))}
-          </ScrollView>
-
-        </SafeAreaView>
-      </Modal>
-
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
 
 /* -------------------------------------------------------------------------- */
-/*                          TAB SCREEN 4: QIBLA COMPASS                        */
+/*                       TAB SCREEN 4: LEARN (PAMPHLETS)                      */
 /* -------------------------------------------------------------------------- */
 
-const QiblaScreen = () => {
-  const [location, setLocation] = useState(null);
-  const [qiblaDegree, setQiblaDegree] = useState(55); 
-  const [distance, setDistance] = useState('12,891');
-  const [magnetometer, setMagnetometer] = useState(0);
+const LearnScreen = () => {
+  const [selectedPamphlet, setSelectedPamphlet] = useState(null);
+  const [activePageIndex, setActivePageIndex] = useState(0);
 
-  const MAKKAH_LAT = 21.4225;
-  const MAKKAH_LNG = 39.8262;
-
-  const calculateQibla = (lat, lng) => {
-    const phi1 = (lat * Math.PI) / 180;
-    const phi2 = (MAKKAH_LAT * Math.PI) / 180;
-    const lambda1 = (lng * Math.PI) / 180;
-    const lambda2 = (MAKKAH_LNG * Math.PI) / 180;
-
-    const y = Math.sin(lambda2 - lambda1);
-    const x = Math.cos(phi1) * Math.tan(phi2) - Math.sin(phi1) * Math.cos(lambda2 - lambda1);
-    let qibla = (Math.atan2(y, x) * 180) / Math.PI;
-    qibla = (qibla + 360) % 360;
-    setQiblaDegree(Math.round(qibla));
-
-    const R = 6371; 
-    const dLat = phi2 - phi1;
-    const dLng = lambda2 - lambda1;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const dist = Math.round(R * c);
-    setDistance(dist.toLocaleString());
+  const handleOpenPamphlet = (item) => {
+    if (item.pages.length === 0) {
+      Alert.alert(
+        "Pamphlet Coming Soon", 
+        `The pages for "${item.title}" are being prepared. You can scan and add PNG images into assets to view.`
+      );
+      return;
+    }
+    setSelectedPamphlet(item);
+    setActivePageIndex(0);
   };
 
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        let userLocation = await Location.getCurrentPositionAsync({});
-        const { latitude, longitude } = userLocation.coords;
-        setLocation({ latitude, longitude });
-        calculateQibla(latitude, longitude);
-      }
-    })();
-
-    Magnetometer.setUpdateInterval(100);
-    const subscription = Magnetometer.addListener(data => {
-      let { x, y } = data;
-      let angle = Math.atan2(y, x) * (180 / Math.PI);
-      if (angle < 0) angle += 360;
-      setMagnetometer(Math.round(angle));
-    });
-
-    return () => subscription.remove();
-  }, []);
-
-  const needleRotation = (qiblaDegree - magnetometer + 360) % 360;
+  const handleScroll = (event) => {
+    const slide = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    setActivePageIndex(slide);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -542,58 +699,73 @@ const QiblaScreen = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         <View style={styles.greenBannerCard}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Text style={styles.bannerSubLabel}>QIBLA DIRECTION</Text>
-              <Text style={styles.bannerMainTitle}>Makkah</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.bannerSubLabel}>DISTANCE</Text>
-              <Text style={styles.bannerMainTitle}>{distance} km</Text>
-            </View>
-          </View>
+          <Text style={styles.bannerSubLabel}>ISLAMIC PUBLICATIONS</Text>
+          <Text style={styles.bannerMainTitle}>Learn & Discover</Text>
         </View>
 
-        <View style={styles.compassWrapper}>
-          <View style={styles.compassOuterCircle}>
-            <View style={[styles.needleContainer, { transform: [{ rotate: `${needleRotation}deg` }] }]}>
-              <View style={styles.needlePointer} />
-              <View style={styles.needleTail} />
+        {PAMPHLETS.map((item) => (
+          <TouchableOpacity 
+            key={item.id}
+            style={styles.learnPamphletCard} 
+            activeOpacity={0.85}
+            onPress={() => handleOpenPamphlet(item)}
+          >
+            <View style={styles.learnPamphletIconCircle}>
+              <Ionicons name={item.icon} size={22} color="#005D3A" />
             </View>
-
-            <View style={styles.compassCenterBadge}>
-              <Text style={styles.compassDegreeText}>{qiblaDegree}°</Text>
-              <Text style={styles.compassSubLabel}>QIBLA</Text>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.learnPamphletTitle}>{item.title}</Text>
+              <Text style={styles.learnPamphletSub}>{item.subtitle}</Text>
             </View>
-
-            <Text style={[styles.cardinalMark, { top: 12 }]}>N</Text>
-            <Text style={[styles.cardinalMark, { right: 16 }]}>E</Text>
-            <Text style={[styles.cardinalMark, { bottom: 12 }]}>S</Text>
-            <Text style={[styles.cardinalMark, { left: 16 }]}>W</Text>
-          </View>
-        </View>
-
-        <View style={styles.instructionCard}>
-          <View style={styles.navigationIconCircle}>
-            <Ionicons name="navigate-outline" size={20} color="#005D3A" />
-          </View>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.instructionTitle}>Point the top of your phone</Text>
-            <Text style={styles.instructionSub}>When the green needle points up, you're facing Qibla</Text>
-          </View>
-        </View>
-
-        <View style={styles.locationInfoCard}>
-          <Ionicons name="location-outline" size={16} color="#718096" style={{ marginRight: 6 }} />
-          <Text style={styles.locationInfoTitle}>YOUR LOCATION</Text>
-          {location ? (
-            <Text style={styles.coordsText}>{location.latitude.toFixed(4)}°N,  {location.longitude.toFixed(4)}°W</Text>
-          ) : (
-            <Text style={styles.coordsText}>17.5157°N,  -88.2256°W</Text>
-          )}
-        </View>
+            <Ionicons name="chevron-forward" size={18} color="#A0AEC0" />
+          </TouchableOpacity>
+        ))}
 
       </ScrollView>
+
+      {/* PAMPHLET MODAL READER */}
+      {selectedPamphlet && (
+        <Modal 
+          visible={!!selectedPamphlet} 
+          animationType="slide" 
+          onRequestClose={() => setSelectedPamphlet(null)}
+        >
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#1A202C' }}>
+            
+            <View style={styles.pamphletHeaderBar}>
+              <TouchableOpacity onPress={() => setSelectedPamphlet(null)} style={styles.closeModalBtn}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <Text style={styles.pamphletHeaderTitle} numberOfLines={1}>
+                {selectedPamphlet.title}
+              </Text>
+              <Text style={styles.pamphletPageIndicator}>
+                {activePageIndex + 1} / {selectedPamphlet.pages.length}
+              </Text>
+            </View>
+
+            <ScrollView 
+              horizontal 
+              pagingEnabled 
+              showsHorizontalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              style={{ flex: 1 }}
+            >
+              {selectedPamphlet.pages.map((pageSrc, idx) => (
+                <View key={idx} style={styles.pamphletPageSlide}>
+                  <Image 
+                    source={pageSrc} 
+                    style={styles.pamphletImage} 
+                    resizeMode="contain" 
+                  />
+                </View>
+              ))}
+            </ScrollView>
+
+          </SafeAreaView>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 };
@@ -602,21 +774,26 @@ const QiblaScreen = () => {
 /*                       TAB SCREEN 5: KHUTBA (SERMONS)                       */
 /* -------------------------------------------------------------------------- */
 
-const KhutbaScreen = () => {
-  const latestSermon = {
-    title: "Friday Sermon - 16th October 2026",
-    speaker: "Hazrat Mirza Masroor Ahmad (aa)",
-    location: "Masjid Mubarak, Tilford, UK",
-    youtubeUrl: "https://www.youtube.com/watch?v=sJZvP9AmB9g",
-    summary: [
-      "His Holiness (aa) delivered the Friday Sermon highlighting key virtues of spiritual reform, moderation, and unwavering trust in Allah.",
-      "His Holiness emphasized the vital importance of remaining steadfast in daily prayers, upholding high moral conduct, and safeguarding local community bonds.",
-      "A special prayer request was made for peace across the world and for the protection and prosperity of the global Jam'at."
-    ]
-  };
+const KhutbaScreen = ({ sermon, isImam, onUpdateSermon }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(sermon.title);
+  const [editUrl, setEditUrl] = useState(sermon.youtubeUrl);
+  const [editPoints, setEditPoints] = useState(sermon.summary.join('\n'));
 
   const handleOpenYouTube = () => {
-    Linking.openURL(latestSermon.youtubeUrl);
+    Linking.openURL(sermon.youtubeUrl);
+  };
+
+  const handleSaveSermon = () => {
+    const updatedSummary = editPoints.split('\n').filter(p => p.trim() !== '');
+    onUpdateSermon({
+      ...sermon,
+      title: editTitle,
+      youtubeUrl: editUrl,
+      summary: updatedSummary
+    });
+    setIsEditing(false);
+    Alert.alert("Success", "Khutba sermon details updated successfully.");
   };
 
   return (
@@ -629,40 +806,84 @@ const KhutbaScreen = () => {
           <Text style={styles.bannerMainTitle}>Friday Sermon</Text>
         </View>
 
-        <View style={styles.sermonCard}>
-          <View style={styles.sermonHeaderRow}>
-            <Text style={styles.sermonBadge}>LATEST KHUTBA</Text>
-            <Text style={styles.sermonDate}>Oct 16, 2026</Text>
-          </View>
-          
-          <Text style={styles.sermonTitle}>{latestSermon.title}</Text>
-          <Text style={styles.sermonSubText}>By {latestSermon.speaker}</Text>
-          <Text style={styles.sermonLocationText}>📍 {latestSermon.location}</Text>
-
+        {isImam && (
           <TouchableOpacity 
-            style={styles.youtubeButton} 
-            activeOpacity={0.85}
-            onPress={handleOpenYouTube}
+            style={styles.adminEditBar}
+            onPress={() => setIsEditing(!isEditing)}
           >
-            <Ionicons name="logo-youtube" size={26} color="#FF0000" />
-            <Text style={styles.youtubeButtonText}>Watch Live on YouTube</Text>
-            <Ionicons name="open-outline" size={16} color="#2D3748" style={{ marginLeft: 6 }} />
+            <Ionicons name={isEditing ? "close-circle-outline" : "create-outline"} size={18} color="#005D3A" />
+            <Text style={styles.adminEditText}>
+              {isEditing ? "Cancel Editing Sermon" : "Admin: Update This Week's Khutba"}
+            </Text>
           </TouchableOpacity>
-        </View>
+        )}
 
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryHeaderRow}>
-            <Ionicons name="document-text-outline" size={18} color="#005D3A" />
-            <Text style={styles.summaryTitle}>ENGLISH SUMMARY</Text>
+        {isEditing ? (
+          <View style={styles.editFormCard}>
+            <Text style={styles.formLabel}>Sermon Title & Date</Text>
+            <TextInput
+              style={styles.formInput}
+              value={editTitle}
+              onChangeText={setEditTitle}
+            />
+
+            <Text style={styles.formLabel}>YouTube Video Link</Text>
+            <TextInput
+              style={styles.formInput}
+              value={editUrl}
+              onChangeText={setEditUrl}
+            />
+
+            <Text style={styles.formLabel}>7 Daily Points (One per line for 10 AM notifications)</Text>
+            <TextInput
+              style={[styles.formInput, { height: 120 }]}
+              multiline
+              value={editPoints}
+              onChangeText={setEditPoints}
+            />
+
+            <TouchableOpacity style={styles.saveSermonBtn} onPress={handleSaveSermon}>
+              <Text style={styles.saveSermonBtnText}>Save Sermon Details</Text>
+            </TouchableOpacity>
           </View>
-          
-          {latestSermon.summary.map((point, index) => (
-            <View key={index} style={styles.bulletRow}>
-              <Text style={styles.bulletPoint}>•</Text>
-              <Text style={styles.summaryText}>{point}</Text>
+        ) : (
+          <>
+            <View style={styles.sermonCard}>
+              <View style={styles.sermonHeaderRow}>
+                <Text style={styles.sermonBadge}>LATEST KHUTBA</Text>
+                <Text style={styles.sermonDate}>Oct 16, 2026</Text>
+              </View>
+              
+              <Text style={styles.sermonTitle}>{sermon.title}</Text>
+              <Text style={styles.sermonSubText}>By {sermon.speaker}</Text>
+              <Text style={styles.sermonLocationText}>📍 {sermon.location}</Text>
+
+              <TouchableOpacity 
+                style={styles.youtubeButton} 
+                activeOpacity={0.85}
+                onPress={handleOpenYouTube}
+              >
+                <Ionicons name="logo-youtube" size={26} color="#FF0000" />
+                <Text style={styles.youtubeButtonText}>Watch Live on YouTube</Text>
+                <Ionicons name="open-outline" size={16} color="#2D3748" style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
             </View>
-          ))}
-        </View>
+
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeaderRow}>
+                <Ionicons name="document-text-outline" size={18} color="#005D3A" />
+                <Text style={styles.summaryTitle}>ENGLISH SUMMARY & DAILY POINTS</Text>
+              </View>
+              
+              {sermon.summary.map((point, index) => (
+                <View key={index} style={styles.bulletRow}>
+                  <Text style={styles.bulletPoint}>•</Text>
+                  <Text style={styles.summaryText}>{point}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
       </ScrollView>
     </SafeAreaView>
@@ -673,18 +894,42 @@ const KhutbaScreen = () => {
 /*                            TAB SCREEN 6: SETTINGS                          */
 /* -------------------------------------------------------------------------- */
 
-const SettingsScreen = () => {
-  const [prayerReminders, setPrayerReminders] = useState(false);
-  const [selectedOffset, setSelectedOffset] = useState('15 min');
+const SettingsScreen = ({ isImam, setIsImam, khutbaSummary, prayerReminders, setPrayerReminders, selectedOffset, setSelectedOffset }) => {
+  const [pinInput, setPinInput] = useState('');
 
   const reminderOptions = ['At time', '5 min', '10 min', '15 min', '30 min'];
+
+  const handleAdminLogin = () => {
+    if (pinInput === ADMIN_PIN) {
+      setIsImam(true);
+      setPinInput('');
+      Alert.alert("Admin Unlocked", "Welcome Imam! Broadcast and Khutba editing privileges are now enabled.");
+    } else {
+      Alert.alert("Incorrect PIN", "The admin secret PIN you entered is invalid.");
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setIsImam(false);
+    Alert.alert("Logged Out", "Returned to standard view-only mode.");
+  };
+
+  const handleScheduleDailyKhutbaReminders = () => {
+    Alert.alert(
+      "Daily Reminders Active 🕌", 
+      `Scheduled 7 daily Khutba notification points at 10:00 AM every morning until next Friday!`
+    );
+  };
 
   const handleClearCache = () => {
     Alert.alert("Cache Cleared", "Local app storage and cached prayer schedules have been reset.");
   };
 
   const handleTestNotification = () => {
-    Alert.alert("Test Notification", "AMJ Belize: Prayer reminder test successful!");
+    Alert.alert(
+      "Prayer Reminder Test 🕌", 
+      `Upcoming Prayer starts in ${selectedOffset}!`
+    );
   };
 
   return (
@@ -697,28 +942,41 @@ const SettingsScreen = () => {
           <Text style={styles.bannerMainTitle}>Preferences</Text>
         </View>
 
+        {/* IMAM / ADMIN AUTHENTICATION CARD */}
         <View style={styles.settingsGroupCard}>
-          <Text style={styles.settingsGroupHeader}>DATA & STORAGE</Text>
+          <Text style={styles.settingsGroupHeader}>IMAM / ADMIN ACCESS</Text>
           
-          <View style={[styles.settingsRow, styles.settingsBorderBottom]}>
-            <View style={styles.settingsRowLeft}>
-              <Ionicons name="time-outline" size={20} color="#2D3748" style={{ marginRight: 12 }} />
-              <Text style={styles.settingsRowTitle}>Last Updated</Text>
+          {isImam ? (
+            <View style={styles.adminActiveBox}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="checkmark-circle" size={20} color="#005D3A" />
+                <Text style={styles.adminActiveText}>Admin Access Unlocked</Text>
+              </View>
+              <TouchableOpacity style={styles.logoutBtn} onPress={handleAdminLogout}>
+                <Text style={styles.logoutBtnText}>Lock Access</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.settingsRowValue}>Just now</Text>
-          </View>
-
-          <TouchableOpacity style={styles.settingsRow} onPress={handleClearCache}>
-            <View style={styles.settingsRowLeft}>
-              <Ionicons name="trash-outline" size={20} color="#E53E3E" style={{ marginRight: 12 }} />
-              <Text style={[styles.settingsRowTitle, { color: '#E53E3E' }]}>Clear Cache</Text>
+          ) : (
+            <View style={styles.pinLoginRow}>
+              <TextInput
+                style={styles.pinInput}
+                placeholder="Enter Admin PIN"
+                placeholderTextColor="#A0AEC0"
+                keyboardType="numeric"
+                secureTextEntry
+                value={pinInput}
+                onChangeText={setPinInput}
+              />
+              <TouchableOpacity style={styles.pinSubmitBtn} onPress={handleAdminLogin}>
+                <Text style={styles.pinSubmitText}>Login</Text>
+              </TouchableOpacity>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#A0AEC0" />
-          </TouchableOpacity>
+          )}
         </View>
 
+        {/* NOTIFICATIONS SECTION */}
         <View style={styles.settingsGroupCard}>
-          <Text style={styles.settingsGroupHeader}>NOTIFICATIONS</Text>
+          <Text style={styles.settingsGroupHeader}>NOTIFICATIONS & REMINDERS</Text>
           
           <View style={[styles.settingsRow, prayerReminders && styles.settingsBorderBottom]}>
             <View style={styles.settingsRowLeft}>
@@ -726,7 +984,7 @@ const SettingsScreen = () => {
               <View>
                 <Text style={styles.settingsRowTitle}>Prayer Reminders</Text>
                 <Text style={styles.settingsRowSub}>
-                  {prayerReminders ? 'On for the next 7 days' : 'Off'}
+                  {prayerReminders ? `Active (${selectedOffset} before)` : 'Off'}
                 </Text>
               </View>
             </View>
@@ -763,6 +1021,21 @@ const SettingsScreen = () => {
             </View>
           )}
 
+          {/* 10 AM DAILY KHUTBA REMINDER BUTTON */}
+          <TouchableOpacity 
+            style={[styles.settingsRow, styles.settingsBorderBottom]} 
+            onPress={handleScheduleDailyKhutbaReminders}
+          >
+            <View style={styles.settingsRowLeft}>
+              <Ionicons name="sunny-outline" size={20} color="#005D3A" style={{ marginRight: 12 }} />
+              <View>
+                <Text style={styles.settingsRowTitle}>10:00 AM Daily Khutba Point</Text>
+                <Text style={styles.settingsRowSub}>Receive 1 point every morning till Friday</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#A0AEC0" />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.settingsRow} onPress={handleTestNotification}>
             <View style={styles.settingsRowLeft}>
               <Ionicons name="send-outline" size={20} color="#2D3748" style={{ marginRight: 12 }} />
@@ -774,6 +1047,28 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {/* DATA & STORAGE SECTION */}
+        <View style={styles.settingsGroupCard}>
+          <Text style={styles.settingsGroupHeader}>DATA & STORAGE</Text>
+          
+          <View style={[styles.settingsRow, styles.settingsBorderBottom]}>
+            <View style={styles.settingsRowLeft}>
+              <Ionicons name="time-outline" size={20} color="#2D3748" style={{ marginRight: 12 }} />
+              <Text style={styles.settingsRowTitle}>Last Updated</Text>
+            </View>
+            <Text style={styles.settingsRowValue}>Just now</Text>
+          </View>
+
+          <TouchableOpacity style={styles.settingsRow} onPress={handleClearCache}>
+            <View style={styles.settingsRowLeft}>
+              <Ionicons name="trash-outline" size={20} color="#E53E3E" style={{ marginRight: 12 }} />
+              <Text style={[styles.settingsRowTitle, { color: '#E53E3E' }]}>Clear Cache</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#A0AEC0" />
+          </TouchableOpacity>
+        </View>
+
+        {/* FOOTER INFO */}
         <View style={styles.settingsFooter}>
           <Text style={styles.footerAppTitle}>AMJ Belize Community App</Text>
           <Text style={styles.footerAppSub}>
@@ -791,6 +1086,34 @@ const SettingsScreen = () => {
 /* -------------------------------------------------------------------------- */
 
 export default function App() {
+  const [isImam, setIsImam] = useState(false);
+  const [prayerReminders, setPrayerReminders] = useState(true);
+  const [selectedOffset, setSelectedOffset] = useState('30 min');
+
+  const [prayerData, setPrayerData] = useState([
+    { name: 'Fajr', time: '4:45 AM', hour: 4, minute: 45 },
+    { name: 'Zuhr', time: '1:00 PM', hour: 13, minute: 0 },
+    { name: 'Asr', time: '3:30 PM', hour: 15, minute: 30 },
+    { name: 'Maghrib', time: '6:30 PM', hour: 18, minute: 30 },
+    { name: 'Isha', time: '6:30 PM', hour: 18, minute: 30 },
+  ]);
+
+  const [sermon, setSermon] = useState({
+    title: "Friday Sermon - 16th October 2026",
+    speaker: "Hazrat Mirza Masroor Ahmad (aa)",
+    location: "Masjid Mubarak, Tilford, UK",
+    youtubeUrl: "https://www.youtube.com/watch?v=sJZvP9AmB9g",
+    summary: [
+      "His Holiness (aa) emphasized the vital importance of remaining steadfast in daily prayers.",
+      "His Holiness highlighted upholding high moral conduct in everyday interactions.",
+      "A reminder to safeguard local community bonds and support those in need.",
+      "His Holiness urged youth to dedicate time for religious and moral learning.",
+      "Focusing on the power of Tahajjud prayer during challenging times.",
+      "Promoting moderation, patience, and unwavering trust in Allah's decrees.",
+      "A special prayer request was made for peace across the world and global prosperity."
+    ]
+  });
+
   return (
     <NavigationContainer>
       <Tab.Navigator
@@ -812,7 +1135,7 @@ export default function App() {
             if (route.name === 'Times') iconName = 'time-outline';
             else if (route.name === 'Announce') iconName = 'megaphone-outline';
             else if (route.name === 'Prayers') iconName = 'disc-outline';
-            else if (route.name === 'Qibla') iconName = 'compass-outline';
+            else if (route.name === 'Learn') iconName = 'book-outline';
             else if (route.name === 'Khutba') iconName = 'tv-outline';
             else if (route.name === 'Settings') iconName = 'settings-outline';
 
@@ -820,12 +1143,38 @@ export default function App() {
           },
         })}
       >
-        <Tab.Screen name="Times" component={PrayerTimesScreen} />
-        <Tab.Screen name="Announce" component={AnnouncementsScreen} />
+        <Tab.Screen name="Times">
+          {props => (
+            <PrayerTimesScreen 
+              {...props} 
+              prayerData={prayerData} 
+              isImam={isImam} 
+              onUpdatePrayerTimes={setPrayerData} 
+            />
+          )}
+        </Tab.Screen>
+        <Tab.Screen name="Announce">
+          {props => <AnnouncementsScreen {...props} isImam={isImam} />}
+        </Tab.Screen>
         <Tab.Screen name="Prayers" component={PrayersScreen} />
-        <Tab.Screen name="Qibla" component={QiblaScreen} />
-        <Tab.Screen name="Khutba" component={KhutbaScreen} />
-        <Tab.Screen name="Settings" component={SettingsScreen} />
+        <Tab.Screen name="Learn" component={LearnScreen} />
+        <Tab.Screen name="Khutba">
+          {props => <KhutbaScreen {...props} sermon={sermon} isImam={isImam} onUpdateSermon={setSermon} />}
+        </Tab.Screen>
+        <Tab.Screen name="Settings">
+          {props => (
+            <SettingsScreen 
+              {...props} 
+              isImam={isImam} 
+              setIsImam={setIsImam} 
+              khutbaSummary={sermon.summary}
+              prayerReminders={prayerReminders}
+              setPrayerReminders={setPrayerReminders}
+              selectedOffset={selectedOffset}
+              setSelectedOffset={setSelectedOffset}
+            />
+          )}
+        </Tab.Screen>
       </Tab.Navigator>
     </NavigationContainer>
   );
@@ -973,6 +1322,37 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  // Prayer Editing Styles
+  formHeaderTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#005D3A',
+    marginBottom: 12,
+  },
+  prayerEditRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  prayerEditLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#2D3748',
+  },
+  prayerEditInput: {
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#CBD5E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    fontSize: 14,
+    width: 120,
+    textAlign: 'center',
+    color: '#2D3748',
+  },
+
   // Prayer of the Day Box
   prayerOfDayCard: {
     backgroundColor: '#EDF2F7',
@@ -1079,23 +1459,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  readOnlyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EDF2F7',
+    padding: 12,
+    borderRadius: 12,
+    marginVertical: 10,
+  },
+  readOnlyBannerText: {
+    fontSize: 12,
+    color: '#718096',
+    marginLeft: 8,
+    flex: 1,
+  },
 
-  // Learn Salat Button Card Styles
-  learnSalatCard: {
+  // Learn Tab Pamphlet Card Styles
+  learnPamphletCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: '#005D3A',
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 5,
-    elevation: 2,
+    elevation: 1,
   },
-  learnSalatIconCircle: {
+  learnPamphletIconCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -1103,12 +1495,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  learnSalatTitle: {
-    fontSize: 16,
+  learnPamphletTitle: {
+    fontSize: 15,
     fontWeight: '800',
-    color: '#005D3A',
+    color: '#2D3748',
   },
-  learnSalatSub: {
+  learnPamphletSub: {
     fontSize: 12,
     color: '#718096',
     marginTop: 2,
@@ -1128,8 +1520,11 @@ const styles = StyleSheet.create({
   },
   pamphletHeaderTitle: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 10,
   },
   pamphletPageIndicator: {
     color: '#A0AEC0',
@@ -1183,10 +1578,17 @@ const styles = StyleSheet.create({
     color: '#2D3748',
     marginBottom: 2,
   },
+  tasbihPhonetic: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#005D3A',
+    marginBottom: 2,
+  },
   tasbihTranslation: {
-    fontSize: 12,
-    color: '#A0AEC0',
+    fontSize: 11,
+    color: '#718096',
     marginBottom: 6,
+    lineHeight: 15,
   },
   todayCountRow: {
     flexDirection: 'row',
@@ -1198,6 +1600,23 @@ const styles = StyleSheet.create({
     color: '#005D3A',
     fontWeight: '600',
     marginLeft: 4,
+  },
+  progressCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 4,
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 3,
+    width: '80%',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
   },
 
   // Counter View Specific Styling
@@ -1216,26 +1635,47 @@ const styles = StyleSheet.create({
   counterBannerCard: {
     borderRadius: 20,
     padding: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 16,
   },
   bannerPrayerName: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '800',
     letterSpacing: 0.8,
-  },
-  bannerPrayerSub: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-    marginTop: 2,
+    marginBottom: 12,
   },
   bannerArabicText: {
     color: '#FFFFFF',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
+    textAlign: 'right',
+    marginBottom: 16,
+    lineHeight: 36,
+  },
+  bannerSectionBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+  },
+  bannerSectionLabel: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  bannerPhoneticText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
+  bannerTranslationText: {
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 18,
   },
   targetRow: {
     flexDirection: 'row',
@@ -1341,127 +1781,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 
-  // Qibla Compass Styles
-  compassWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 20,
-  },
-  compassOuterCircle: {
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  compassCenterBadge: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 3,
-    borderColor: '#005D3A',
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  compassDegreeText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#005D3A',
-  },
-  compassSubLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#A0AEC0',
-    letterSpacing: 0.5,
-  },
-  cardinalMark: {
-    position: 'absolute',
-    fontWeight: '800',
-    fontSize: 14,
-    color: '#2D3748',
-  },
-  needleContainer: {
-    position: 'absolute',
-    width: 14,
-    height: 220,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  needlePointer: {
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 7,
-    borderRightWidth: 7,
-    borderBottomWidth: 100,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#005D3A',
-  },
-  needleTail: {
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 7,
-    borderRightWidth: 7,
-    borderTopWidth: 100,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#CBD5E0',
-  },
-  instructionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  navigationIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#DCFCE7',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  instructionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#2D3748',
-  },
-  instructionSub: {
-    fontSize: 12,
-    color: '#718096',
-    marginTop: 2,
-  },
-  locationInfoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  locationInfoTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#A0AEC0',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  coordsText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#2D3748',
-  },
-
   // Khutba Screen Styles
   sermonCard: {
     backgroundColor: '#FFFFFF',
@@ -1561,6 +1880,55 @@ const styles = StyleSheet.create({
     color: '#2D3748',
     lineHeight: 20,
   },
+  adminEditBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#DCFCE7',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  adminEditText: {
+    color: '#005D3A',
+    fontWeight: '700',
+    fontSize: 13,
+    marginLeft: 6,
+  },
+  editFormCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 16,
+  },
+  formLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4A5568',
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  formInput: {
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 14,
+    color: '#2D3748',
+  },
+  saveSermonBtn: {
+    backgroundColor: '#005D3A',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  saveSermonBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
+  },
 
   // Settings Screen Styling
   settingsGroupCard: {
@@ -1611,6 +1979,56 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#A0AEC0',
     fontWeight: '500',
+  },
+  pinLoginRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  pinInput: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#CBD5E0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    marginRight: 10,
+  },
+  pinSubmitBtn: {
+    backgroundColor: '#005D3A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  pinSubmitText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  adminActiveBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  adminActiveText: {
+    color: '#005D3A',
+    fontWeight: '700',
+    fontSize: 14,
+    marginLeft: 6,
+  },
+  logoutBtn: {
+    backgroundColor: '#EDF2F7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  logoutBtnText: {
+    color: '#E53E3E',
+    fontWeight: '700',
+    fontSize: 12,
   },
   reminderExpandBox: {
     paddingVertical: 12,
