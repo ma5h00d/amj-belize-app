@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "AMJ Belize Community",
+    "name": "AMJ Belize",
     "slug": "amj-belize",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#005D3A"
     },
@@ -17,14 +17,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#005D3A"
       },
       "package": "com.amjbelize.communityapp"
     },
     "extra": {
       "eas": {
-        "projectId": "YOUR_EXPO_PROJECT_ID_HERE"
+        "projectId": "720a771c-a202-48b8-aa65-f352780633e1"
       }
     }
   }
